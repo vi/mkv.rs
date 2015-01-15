@@ -1,0 +1,5 @@
+[package]
+
+name = "rsmkvparse"
+version = "0.0.1"
+authors = ["rust"]
