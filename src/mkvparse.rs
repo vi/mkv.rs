@@ -2,7 +2,7 @@ use std::vec::Vec;
 use std::string::String;
 
 pub trait MkvCallbacks {
-    fn debug(&self, str : String);
+    fn debug(&mut self, str : String);
 }
 
 pub trait MkvParser<Cb : MkvCallbacks> {
@@ -25,6 +25,6 @@ impl<Cb:MkvCallbacks> MkvParser<Cb> for State<Cb> {
     
     fn feed_bytes(&mut self, bytes : Vec<u8>)
     {
-        self.cb.debug(String::from_str("Hello, world"));
+        self.cb.debug(format!("feed_bytes {}", bytes[0]));
     }
 }
