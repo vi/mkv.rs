@@ -4,27 +4,29 @@ use mkv::AuxilaryEvent::Debug;
 
 mod tests_parse_ebml_number;
 
-// I expect that filled in, but not accessed fields would get optimized away
-struct EbmlNumberInfo {
-    as_id       : u64,
-    as_unsigned : u64,
-    length_in_bytes : usize,
-}
-
+#[derive(PartialEq,Show)] // for assert_eq!
 enum EbmlParseNumberResult {
     Error,
     NotEnoughData,
-    NaN(usize), // length_in_bytes
-    Ok(EbmlNumberInfo)
+    NaN,
+    Ok(u64),
 }
 
-fn parse_ebml_number(bytes:&[u8]) -> EbmlParseNumberResult {
+enum EbmlParseNumberMode {
+    Unsigned,
+    Identifier,
+}
+
+/** returns the rest of input buffer which is unused */
+fn parse_ebml_number(bytes:&[u8], mode:EbmlParseNumberMode) -> (EbmlParseNumberResult, &[u8])
+{
     use self::EbmlParseNumberResult::*;
+    use self::EbmlParseNumberMode::*;
     
     let mut b =     bytes.iter();
     let firstbyte = match b.next() {
                 Some(x) => *x, 
-                None => return NotEnoughData
+                None => return (NotEnoughData, bytes)
     };
     let mut more_bytes : usize;
     let mut mask : u8;
@@ -37,32 +39,30 @@ fn parse_ebml_number(bytes:&[u8]) -> EbmlParseNumberResult {
     else if firstbyte & 0x04 != 0 { more_bytes = 5; mask = 0x03; }
     else if firstbyte & 0x02 != 0 { more_bytes = 6; mask = 0x01; }
     else if firstbyte & 0x01 != 0 { more_bytes = 7; mask = 0x00; }
-    else { return Error }
+    else { return (Error, bytes); }
     
-    let mut as_id       = firstbyte as u64;
-    let mut as_unsigned = (firstbyte & mask) as u64;
+    let mut x = match mode {
+        Unsigned   => (firstbyte & mask) as u64,
+        Identifier =>  firstbyte         as u64,
+    };
     let mut is_nan = (firstbyte & mask) == (0xFF & mask);
     
     for _ in (0..more_bytes) {
-        as_unsigned <<= 8;
-        as_id       <<= 8;
+        x <<= 8;
         let nextbyte = match b.next() {
-            Some(x) => *x,
-            None => return NotEnoughData
+            Some(v) => *v,
+            None => return (NotEnoughData, bytes)
         };
-        as_unsigned += nextbyte as u64;
-        as_id       += nextbyte as u64;
+        x += nextbyte as u64;
         if nextbyte != 0xFF { is_nan = false; }
     };
     
+    let (_, rest) = bytes.split_at(1+more_bytes);
+    
     if is_nan {
-        NaN(1+more_bytes)
+        (NaN, rest)
     } else {
-        Ok(EbmlNumberInfo {
-            as_id       : as_id,
-            as_unsigned : as_unsigned,
-            length_in_bytes : 1+more_bytes,
-        })
+        (Ok(x), rest)
     }
 }
 
@@ -81,31 +81,33 @@ pub struct ParserState<E> {
 }
 
 
-enum ResultOfTryParseSomething {
-    KeepGoing,
+enum ResultOfTryParseSomething<'a> {
+    KeepGoing(&'a [u8]),
     NoMoreData,
     Error,
 }
 
 impl<E:EventsHandler> ParserState<E> {
-    fn try_parse_something(&mut self) -> ResultOfTryParseSomething {
+    fn try_parse_something<'a>(&mut self, buf:&'a [u8]) -> ResultOfTryParseSomething<'a> {
         use self::ResultOfTryParseSomething::{NoMoreData,KeepGoing};
         use self::ResultOfTryParseSomething::Error as MyError;
         use self::EbmlParseNumberResult::*;
+        use self::EbmlParseNumberMode::*;
         
-        let buf = self.accumulator.as_slice();
-        let (elemend_id, offs) = match parse_ebml_number(buf) {
+        let (r1, restbuf) = parse_ebml_number(buf, Identifier);
+        let element_id = match r1 {
             Error => return MyError,
-            NaN(_) => return MyError,
+            NaN => return MyError,
             NotEnoughData => return NoMoreData,
-            Ok(x) => (x.as_id, x.length_in_bytes),
+            Ok(x) => x
         };
-        let (_, restbuf) = buf.split_at(offs);
-        let (element_size, offs) = match parse_ebml_number(restbuf) {
+        
+        let (r2, restbuf2) = parse_ebml_number(restbuf, Unsigned);
+        let element_size = match r2 {
             Error => return MyError,
-            NaN(n) => (None, n),
+            NaN => None,
             NotEnoughData => return NoMoreData,
-            Ok(x) => (Some(x.as_unsigned), x.length_in_bytes),
+            Ok(x) => Some(x)
         };
         
         NoMoreData
@@ -129,12 +131,14 @@ impl<E:EventsHandler> Parser<E> for ParserState<E> {
         use self::ResultOfTryParseSomething::*;
         
         self.accumulator.push_all(bytes);
+        
+        let mut buf = bytes.as_slice();
         loop {
-            let r = self.try_parse_something();
+            let r = self.try_parse_something(buf);
             match r {
                 NoMoreData => return,
                 Error => panic!("Need to implement resyncing"),
-                KeepGoing => (),
+                KeepGoing(rest) => buf = rest,
             }
         }
         //self.cb.auxilary_event( Debug (format!("feed_bytes {} len={}", bytes[0], self.accumulator.len()) ));

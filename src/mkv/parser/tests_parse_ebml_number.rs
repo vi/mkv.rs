@@ -1,67 +1,61 @@
 use super::parse_ebml_number;
 use super::EbmlParseNumberResult;
-use super::EbmlNumberInfo;
+use super::EbmlParseNumberMode::*;
 
-fn unwrap_ebmlpr(x : EbmlParseNumberResult) -> EbmlNumberInfo {
-    match x {
-        EbmlParseNumberResult::Ok(y) => y,
-        _ => panic!("Expected successfull parse")
-    }
-}
-
-fn unwrap_nan(x : EbmlParseNumberResult) -> usize {
-    match x {
-        EbmlParseNumberResult::NaN(y) => y,
-        _ => panic!("Expected NaN")
-    }
-}
 
 #[test]
 fn parse_ebml_number_test_1() {
-    let rr = parse_ebml_number(&[0x1A,0x45,0xDF,0xA3]);
-    let r = unwrap_ebmlpr(rr);
-    assert_eq!(r.as_id, 0x1A45DFA3);
-    assert_eq!(r.as_unsigned, 0x0A45DFA3); 
-    assert_eq!(r.length_in_bytes, 4); 
-}
-
-
-#[test]
-fn parse_ebml_number_test_1b() {
-    let rr = parse_ebml_number(&[0x4A,0x45,0xDF,0xA3]);
-    let r = unwrap_ebmlpr(rr);
-    assert_eq!(r.as_id, 0x4A45);
-    assert_eq!(r.as_unsigned, 0x0A45);
-    assert_eq!(r.length_in_bytes, 2);
+    let input = [0x1A,0x45,0xDF,0xA3];
+    let (r,rest) = parse_ebml_number(&input, Identifier);
+    assert_eq!(r, EbmlParseNumberResult::Ok(0x1A45DFA3));
+    assert_eq!(rest, []);
 }
 
 #[test]
 fn parse_ebml_number_test_2() {
-    let rr = parse_ebml_number(&[0xFF,0x7F]);
-    let r = unwrap_nan(rr);
-    assert_eq!(r, 1); 
+    let input = [0x1A,0x45,0xDF,0xA3];
+    let (r,rest) = parse_ebml_number(&input, Unsigned);
+    assert_eq!(r, EbmlParseNumberResult::Ok(0x0A45DFA3));
+    assert_eq!(rest, []);
 }
+
+
 #[test]
 fn parse_ebml_number_test_3() {
-    let rr = parse_ebml_number(&[0x7F,0xFF]);
-    let r = unwrap_nan(rr);
-    assert_eq!(r, 2); 
+    let input = [0x4A,0x45,0xDF,0xA3];
+    let (r,rest) = parse_ebml_number(&input, Unsigned);
+    assert_eq!(r, EbmlParseNumberResult::Ok(0x0A45));
+    assert_eq!(rest, [0xDF,0xA3]);
 }
+
 
 #[test]
 fn parse_ebml_number_test_4() {
-    let rr = parse_ebml_number(&[0x00]);
-    match rr {
-        EbmlParseNumberResult::Error => (),
-        _ => panic!("Expected error")
-    }
+    let input = [0xFF,0x7F];
+    let (r,rest) = parse_ebml_number(&input, Unsigned);
+    assert_eq!(r, EbmlParseNumberResult::NaN);
+    assert_eq!(rest, [0x7F]);
 }
+
 
 #[test]
 fn parse_ebml_number_test_5() {
-    let rr = parse_ebml_number(&[0x40]);
-    match rr {
-        EbmlParseNumberResult::NotEnoughData => (),
-        _ => panic!("Expected NotEnoughData")
-    }
+    let input = [0x7F,0xFF];
+    let (r,rest) = parse_ebml_number(&input, Unsigned);
+    assert_eq!(r, EbmlParseNumberResult::NaN);
+    assert_eq!(rest, []);
+}
+
+#[test]
+fn parse_ebml_number_test_6() {
+    let input = [0x00];
+    let (r,rest) = parse_ebml_number(&input, Unsigned);
+    assert_eq!(r, EbmlParseNumberResult::Error);
+}
+
+#[test]
+fn parse_ebml_number_test_7() {
+    let input = [0x40];
+    let (r,rest) = parse_ebml_number(&input, Unsigned);
+    assert_eq!(r, EbmlParseNumberResult::NotEnoughData);
 }
