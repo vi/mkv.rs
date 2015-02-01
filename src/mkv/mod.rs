@@ -14,5 +14,5 @@ pub trait EventsHandler {
 
 pub trait Parser<E : EventsHandler> {
     fn initialize(cb : E) -> Self;
-    fn feed_bytes(&mut self, bytes : Vec<u8>);
+    fn feed_bytes(&mut self, bytes : &[u8]);
 }

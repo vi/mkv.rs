@@ -19,7 +19,6 @@ impl mkv::EventsHandler for MyHandlerState {
     }
 }
 
-
 fn main() {
     let path = Path::new("q.mkv");
     let mut f = BufferedReader::new(File::open(&path));
@@ -27,9 +26,11 @@ fn main() {
     let du = MyHandlerState { ctr: 0 };
     let mut m : mkv::parser::ParserState<MyHandlerState> = mkv::Parser::initialize(du);
     
+    
     loop {
-        match f.read_byte() {
-            Ok(x) => m.feed_bytes(vec![x]),
+        let mut b = [0; 4096];
+        match f.read(&mut b) {
+            Ok(x) => m.feed_bytes(&b),
             Err(e) => { println!("error reading: {}", e); break; }
         }
     }
