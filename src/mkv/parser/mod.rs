@@ -1,70 +1,14 @@
 use mkv::EventsHandler;
 use mkv::Parser;
 use mkv::AuxilaryEvent::Debug;
+use mkv::elements::{id_to_class,class_to_type};
 
-mod tests_parse_ebml_number;
+use self::parse_ebml_number::parse_ebml_number;
+use self::parse_ebml_number::Result as EbmlParseNumberResult;
+use self::parse_ebml_number::Mode   as EbmlParseNumberMode;
 
-#[derive(PartialEq,Show)] // for assert_eq!
-enum EbmlParseNumberResult {
-    Error,
-    NotEnoughData,
-    NaN,
-    Ok(u64),
-}
+mod parse_ebml_number;
 
-enum EbmlParseNumberMode {
-    Unsigned,
-    Identifier,
-}
-
-/** returns the rest of input buffer which is unused */
-fn parse_ebml_number(bytes:&[u8], mode:EbmlParseNumberMode) -> (EbmlParseNumberResult, &[u8])
-{
-    use self::EbmlParseNumberResult::*;
-    use self::EbmlParseNumberMode::*;
-    
-    let mut b =     bytes.iter();
-    let firstbyte = match b.next() {
-                Some(x) => *x, 
-                None => return (NotEnoughData, bytes)
-    };
-    let mut more_bytes : usize;
-    let mut mask : u8;
-    
-    if      firstbyte & 0x80 != 0 { more_bytes = 0; mask = 0x7F; }
-    else if firstbyte & 0x40 != 0 { more_bytes = 1; mask = 0x3F; }
-    else if firstbyte & 0x20 != 0 { more_bytes = 2; mask = 0x1F; }
-    else if firstbyte & 0x10 != 0 { more_bytes = 3; mask = 0x0F; }
-    else if firstbyte & 0x08 != 0 { more_bytes = 4; mask = 0x07; }
-    else if firstbyte & 0x04 != 0 { more_bytes = 5; mask = 0x03; }
-    else if firstbyte & 0x02 != 0 { more_bytes = 6; mask = 0x01; }
-    else if firstbyte & 0x01 != 0 { more_bytes = 7; mask = 0x00; }
-    else { return (Error, bytes); }
-    
-    let mut x = match mode {
-        Unsigned   => (firstbyte & mask) as u64,
-        Identifier =>  firstbyte         as u64,
-    };
-    let mut is_nan = (firstbyte & mask) == (0xFF & mask);
-    
-    for _ in (0..more_bytes) {
-        x <<= 8;
-        let nextbyte = match b.next() {
-            Some(v) => *v,
-            None => return (NotEnoughData, bytes)
-        };
-        x += nextbyte as u64;
-        if nextbyte != 0xFF { is_nan = false; }
-    };
-    
-    let (_, rest) = bytes.split_at(1+more_bytes);
-    
-    if is_nan {
-        (NaN, rest)
-    } else {
-        (Ok(x), rest)
-    }
-}
 
 pub struct OpenedElement {
     id : u64,
@@ -80,7 +24,7 @@ pub struct ParserState<E> {
     current_offset : u64,
 }
 
-
+#[derive(Show,Eq,PartialEq)]
 enum ResultOfTryParseSomething<'a> {
     KeepGoing(&'a [u8]),
     NoMoreData,
@@ -91,8 +35,9 @@ impl<E:EventsHandler> ParserState<E> {
     fn try_parse_something<'a>(&mut self, buf:&'a [u8]) -> ResultOfTryParseSomething<'a> {
         use self::ResultOfTryParseSomething::{NoMoreData,KeepGoing};
         use self::ResultOfTryParseSomething::Error as MyError;
-        use self::EbmlParseNumberResult::*;
-        use self::EbmlParseNumberMode::*;
+        use self::parse_ebml_number::Result::*;
+        use self::parse_ebml_number::Mode::*;
+        use mkv::elements::Type::{Master};
         
         let (r1, restbuf) = parse_ebml_number(buf, Identifier);
         let element_id = match r1 {
@@ -110,7 +55,31 @@ impl<E:EventsHandler> ParserState<E> {
             Ok(x) => Some(x)
         };
         
-        NoMoreData
+        let cl  = id_to_class(element_id);
+        let typ = class_to_type(&cl);
+        
+                                                        
+        let mut restbuf3 = restbuf2;
+        
+        match typ {
+            Master => (),
+            _ => match element_size {
+                None => (),
+                Some(x) => {
+                            let datalen = x as usize;
+                            if datalen < restbuf2.len() {
+                                let (l,r) = restbuf2.split_at(datalen); restbuf3 = r;
+                            } else {
+                                return NoMoreData;
+                            }
+                           } 
+            }
+        }
+        
+        self.cb.auxilary_event( Debug (format!("element class={:?} type={:?} off={} clid={}  len={:?}",
+                                                        cl, typ, self.current_offset, element_id, element_size )));
+                                                        
+        KeepGoing(restbuf3)
     }
 }
 
@@ -130,17 +99,26 @@ impl<E:EventsHandler> Parser<E> for ParserState<E> {
     {
         use self::ResultOfTryParseSomething::*;
         
+        //self.cb.auxilary_event( Debug (format!("feed_bytes {} len={}", bytes[0], self.accumulator.len()) ));
         self.accumulator.push_all(bytes);
         
-        let mut buf = bytes.as_slice();
-        loop {
-            let r = self.try_parse_something(buf);
-            match r {
-                NoMoreData => return,
-                Error => panic!("Need to implement resyncing"),
-                KeepGoing(rest) => buf = rest,
+        let tmpvector = self.accumulator.to_vec();
+        {
+            let mut buf = tmpvector.as_slice();
+            //self.cb.auxilary_event( Debug (format!("feed_bytes2 len={} buflen={}", self.accumulator.len(), buf.len()) ));
+            loop {
+                let r = self.try_parse_something(buf);
+                //self.cb.auxilary_event( Debug (format!("try_parse_something={:?}", r)));
+                let newbuf = match r {
+                    NoMoreData => break,
+                    Error => panic!("Need to implement resyncing"),
+                    KeepGoing(rest) => rest
+                };
+                self.current_offset += (buf.len() - newbuf.len()) as u64;
+                buf = newbuf;
             }
+            self.accumulator = buf.to_vec();
         }
-        //self.cb.auxilary_event( Debug (format!("feed_bytes {} len={}", bytes[0], self.accumulator.len()) ));
+        //self.cb.auxilary_event( Debug (format!("feed_bytes3 len={}" , self.accumulator.len())));
     }
 }

@@ -2,6 +2,7 @@ use std::vec::Vec;
 use std::string::String;
 
 pub mod parser;
+pub mod elements;
 
 pub enum AuxilaryEvent {
     Debug(String),
