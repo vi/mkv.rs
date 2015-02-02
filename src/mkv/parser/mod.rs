@@ -1,6 +1,6 @@
 use mkv::EventsHandler;
 use mkv::Parser;
-use mkv::AuxilaryEvent::Debug;
+use mkv::ElementInfo;
 use mkv::elements::{id_to_class,class_to_type};
 
 use self::parse_ebml_number::parse_ebml_number;
@@ -9,18 +9,18 @@ use self::parse_ebml_number::Mode   as EbmlParseNumberMode;
 
 mod parse_ebml_number;
 
-
-pub struct OpenedElement {
-    id : u64,
-    offset : u64,
-    length : Option<u64>,
+pub enum ParserMode {
+    Header,
+    Data(usize),
+    Resync,
 }
+
 
 pub struct ParserState<E> {
     cb : E,
     accumulator : Vec<u8>,
-    opened_elements_stack : Vec<OpenedElement>,
-    resyncing : bool,
+    opened_elements_stack : Vec<ElementInfo>,
+    mode : ParserMode,
     current_offset : u64,
 }
 
@@ -33,11 +33,37 @@ enum ResultOfTryParseSomething<'a> {
 
 impl<E:EventsHandler> ParserState<E> {
     fn try_parse_something<'a>(&mut self, buf:&'a [u8]) -> ResultOfTryParseSomething<'a> {
+        use self::ParserMode::*;
+        match self.mode {
+            Resync => panic!("Resyncing is not implemented yet"),
+            Header => self.try_parse_element_header(buf),
+            Data(x) => self.try_parse_element_data(buf, x),
+        }
+    }
+    
+    fn try_parse_element_data<'a>(&mut self, buf:&'a [u8], len:usize) -> ResultOfTryParseSomething<'a> {
+        use self::ResultOfTryParseSomething::{NoMoreData,KeepGoing};
+        use mkv::AuxilaryEvent::{ElementData};
+        use self::ParserMode;
+        
+        if len < buf.len() {
+            self.mode = ParserMode::Header;
+            let (l,r) = buf.split_at(len);
+            self.cb.auxilary_event( ElementData( l ));
+            KeepGoing(r)
+        } else {
+            return NoMoreData;
+        }
+    }
+    
+    fn try_parse_element_header<'a>(&mut self, buf:&'a [u8]) -> ResultOfTryParseSomething<'a> {
         use self::ResultOfTryParseSomething::{NoMoreData,KeepGoing};
         use self::ResultOfTryParseSomething::Error as MyError;
         use self::parse_ebml_number::Result::*;
         use self::parse_ebml_number::Mode::*;
         use mkv::elements::Type::{Master};
+        use mkv::AuxilaryEvent::{Debug,ElementBegin};
+        use self::ParserMode;
         
         let (r1, restbuf) = parse_ebml_number(buf, Identifier);
         let element_id = match r1 {
@@ -61,23 +87,17 @@ impl<E:EventsHandler> ParserState<E> {
                                                         
         let mut restbuf3 = restbuf2;
         
-        match typ {
-            Master => (),
+        self.mode = match typ {
+            Master => ParserMode::Header,
             _ => match element_size {
-                None => (),
-                Some(x) => {
-                            let datalen = x as usize;
-                            if datalen < restbuf2.len() {
-                                let (l,r) = restbuf2.split_at(datalen); restbuf3 = r;
-                            } else {
-                                return NoMoreData;
-                            }
-                           } 
+                None => ParserMode::Resync,
+                Some(x) => ParserMode::Data(x as usize),
             }
-        }
+        };
         
-        self.cb.auxilary_event( Debug (format!("element class={:?} type={:?} off={} clid={}  len={:?}",
-                                                        cl, typ, self.current_offset, element_id, element_size )));
+        self.cb.auxilary_event( ElementBegin( ElementInfo{id: element_id, length: element_size, offset: self.current_offset} ));
+        //self.cb.auxilary_event( Debug (format!("element class={:?} type={:?} off={} clid={}  len={:?}",
+        //                                                cl, typ, self.current_offset, element_id, element_size )));
                                                         
         KeepGoing(restbuf3)
     }
@@ -89,7 +109,7 @@ impl<E:EventsHandler> Parser<E> for ParserState<E> {
         ParserState {
             accumulator: vec![],
             cb : cb,
-            resyncing : false,
+            mode : ParserMode::Header,
             opened_elements_stack : vec![],
             current_offset : 0,
         }

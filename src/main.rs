@@ -14,6 +14,8 @@ impl mkv::EventsHandler for MyHandlerState {
         match e {
             mkv::AuxilaryEvent::Warning(str) => println!("warning {}", str),
             mkv::AuxilaryEvent::Debug(str)   => println!("debug {}: {}", self.ctr, str),
+            mkv::AuxilaryEvent::ElementBegin(x) => println!("element {:?}", x),
+            mkv::AuxilaryEvent::ElementData(x) => println!("data len={}", x.len()),
         }
         self.ctr+=1;
     }
@@ -31,7 +33,7 @@ fn main() {
         let mut b = [0; 4096];
         match f.read(&mut b) {
             Ok(x) => m.feed_bytes(&b),
-            Err(e) => { println!("error reading: {}", e); break; }
+            Err(e) => { println!("error reading: {}", e); break; },
         }
     }
 }
