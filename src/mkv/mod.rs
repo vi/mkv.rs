@@ -9,14 +9,25 @@ pub mod elements;
 pub struct ElementInfo {
     id : u64,
     offset : u64,
-    length : Option<u64>,
+    length_including_header : Option<u64>,
+}
+
+#[derive(Show,PartialEq)]
+pub enum SimpleElementContent<'a> {
+    Unsigned(u64),
+    Signed(i64),
+    Text(&'a str),
+    Binary(&'a [u8]),
+    Float(f64),
+    Date_NanosecondsSince20010101_000000_UTC(i64),
 }
 
 pub enum AuxilaryEvent<'a> {
-    Debug(String),
-    Warning(String),
-    ElementBegin(ElementInfo),
-    ElementData(&'a [u8]),
+    Debug(&'a str),
+    Warning(&'a str),
+    ElementBegin(&'a ElementInfo),
+    ElementData(SimpleElementContent<'a>),
+    ElementEnd(&'a ElementInfo),
 }
 
 pub trait EventsHandler {
@@ -39,9 +50,9 @@ impl fmt::Show for ElementInfo {
             _ => format!("{:?}", cl),
         };
         
-        let maybelen = match self.length {
+        let maybelen = match self.length_including_header {
             None => format!(""),
-            Some(x) => format!(", length:{}", x),
+            Some(x) => format!(", rawlen:{}", x),
         };
         
         f.write_str(format!("{}(offset:{}{})", cldesc, self.offset, maybelen).as_slice())

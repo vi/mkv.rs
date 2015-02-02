@@ -44,12 +44,14 @@ impl<E:EventsHandler> ParserState<E> {
     fn try_parse_element_data<'a>(&mut self, buf:&'a [u8], len:usize) -> ResultOfTryParseSomething<'a> {
         use self::ResultOfTryParseSomething::{NoMoreData,KeepGoing};
         use mkv::AuxilaryEvent::{ElementData};
+        use mkv::SimpleElementContent::
+                    {Unsigned, Signed, Text, Binary, Float, Date_NanosecondsSince20010101_000000_UTC};
         use self::ParserMode;
         
         if len < buf.len() {
             self.mode = ParserMode::Header;
             let (l,r) = buf.split_at(len);
-            self.cb.auxilary_event( ElementData( l ));
+            self.cb.auxilary_event( ElementData( Binary(l) ));
             KeepGoing(r)
         } else {
             return NoMoreData;
@@ -74,11 +76,17 @@ impl<E:EventsHandler> ParserState<E> {
         };
         
         let (r2, restbuf2) = parse_ebml_number(restbuf, Unsigned);
+        
+        let element_header_size = (buf.len() - restbuf2.len()) as u64;
         let element_size = match r2 {
             Error => return MyError,
             NaN => None,
             NotEnoughData => return NoMoreData,
             Ok(x) => Some(x)
+        };
+        let full_element_size = match element_size {
+            None => None,
+            Some(x) => Some(x + element_header_size),
         };
         
         let cl  = id_to_class(element_id);
@@ -95,11 +103,44 @@ impl<E:EventsHandler> ParserState<E> {
             }
         };
         
-        self.cb.auxilary_event( ElementBegin( ElementInfo{id: element_id, length: element_size, offset: self.current_offset} ));
+        let el = ElementInfo{id: element_id, length_including_header: full_element_size, offset: self.current_offset}; 
+        self.cb.auxilary_event( ElementBegin( &el ));
+        self.opened_elements_stack.push(el);
         //self.cb.auxilary_event( Debug (format!("element class={:?} type={:?} off={} clid={}  len={:?}",
         //                                                cl, typ, self.current_offset, element_id, element_size )));
                                                         
         KeepGoing(restbuf3)
+    }
+    
+    fn close_expired_elements<'a>(&mut self) {
+        use mkv::AuxilaryEvent::{Debug,ElementEnd};
+        let mut number_of_elements_to_remove = 0;
+        
+        for i in self.opened_elements_stack.iter().rev() {
+            let retain = match i.length_including_header {
+                None => true,
+                Some(l) => i.offset + l > self.current_offset
+            };
+            //self.cb.auxilary_event (Debug(format!("dr {:?} {} -> {}", i, self.current_offset, retain).as_slice()));
+            
+            if retain {
+                break;
+            } else {
+                number_of_elements_to_remove += 1;
+            }
+        }
+        
+        {
+            let mut j = 0;
+            for i in self.opened_elements_stack.iter().rev() {
+                j += 1;
+                if j > number_of_elements_to_remove { break; }
+                self.cb.auxilary_event (ElementEnd(i));
+            }
+        }
+        
+        let newlen = self.opened_elements_stack.len() - number_of_elements_to_remove;
+        self.opened_elements_stack.truncate(newlen);
     }
 }
 
@@ -135,6 +176,7 @@ impl<E:EventsHandler> Parser<E> for ParserState<E> {
                     KeepGoing(rest) => rest
                 };
                 self.current_offset += (buf.len() - newbuf.len()) as u64;
+                self.close_expired_elements();
                 buf = newbuf;
             }
             self.accumulator = buf.to_vec();
