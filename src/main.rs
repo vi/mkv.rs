@@ -1,5 +1,9 @@
-use std::io::File;
-use std::io::BufferedReader;
+#![feature(collections,convert,core)]
+#![allow(non_camel_case_types)]
+use std::fs::File;
+use std::io::BufReader;
+use std::path::Path;
+use std::io::Read;
 
 use mkv::Parser;
 
@@ -37,7 +41,10 @@ impl mkv::EventsHandler for MyHandlerState {
 
 fn main() {
     let path = Path::new("q.mkv");
-    let mut f = BufferedReader::new(File::open(&path));
+    let mut f = match File::open(&path) {
+        Ok(x) => BufReader::new(x),
+        Err(e) => panic!("Failed to open file q.mkv"),
+    };
     
     let du = MyHandlerState { ctr: 0, indent : 0 };
     let mut m : mkv::parser::ParserState<MyHandlerState> = mkv::Parser::initialize(du);

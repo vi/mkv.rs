@@ -12,7 +12,7 @@ pub struct ElementInfo {
     length_including_header : Option<u64>,
 }
 
-#[derive(Show,PartialEq)]
+#[derive(Debug,PartialEq)]
 pub enum SimpleElementContent<'a> {
     Unsigned(u64),
     Signed(i64),
@@ -39,7 +39,7 @@ pub trait Parser<E : EventsHandler> {
     fn feed_bytes(&mut self, bytes : &[u8]);
 }
 
-impl fmt::Show for ElementInfo {
+impl fmt::Debug for ElementInfo {
     fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result
     {
         let cl = elements::id_to_class(self.id);

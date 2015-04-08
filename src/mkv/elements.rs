@@ -1,4 +1,4 @@
-#[derive(Show,Eq,PartialEq)]
+#[derive(Debug,Eq,PartialEq)]
 pub enum Type {
     Master,
     Unsigned,
@@ -10,7 +10,7 @@ pub enum Type {
     Date,
 }
 
-#[derive(Show,Eq,PartialEq)]
+#[derive(Debug,Eq,PartialEq)]
 pub enum Class {
     EBML,
     EBMLVersion,

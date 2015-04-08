@@ -24,7 +24,7 @@ pub struct ParserState<E> {
     current_offset : u64,
 }
 
-#[derive(Show,Eq,PartialEq)]
+#[derive(Debug,Eq,PartialEq)]
 enum ResultOfTryParseSomething<'a> {
     KeepGoing(&'a [u8]),
     NoMoreData,

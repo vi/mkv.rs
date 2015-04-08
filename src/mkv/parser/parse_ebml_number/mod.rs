@@ -1,6 +1,6 @@
 mod test;
 
-#[derive(PartialEq,Show)] // for assert_eq!
+#[derive(PartialEq,Debug)] // for assert_eq!
 pub enum Result {
     Error,
     NotEnoughData,
