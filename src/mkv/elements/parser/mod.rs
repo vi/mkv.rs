@@ -8,6 +8,7 @@ use self::parse_ebml_number::Result as EbmlParseNumberResult;
 use self::parse_ebml_number::Mode   as EbmlParseNumberMode;
 
 mod parse_ebml_number;
+mod test;
 
 extern crate byteorder;
 
