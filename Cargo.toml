@@ -1,5 +1,5 @@
 [package]
 
-name = "rsmkvparse"
+name = "mkv"
 version = "0.0.1"
-authors = ["rust"]
+authors = ["Vitaly '_Vi' Shukela"]
