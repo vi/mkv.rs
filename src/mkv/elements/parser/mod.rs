@@ -11,6 +11,7 @@ use std::fmt;
 
 mod parse_ebml_number;
 mod test;
+pub mod debug;
 
 extern crate byteorder;
 

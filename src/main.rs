@@ -9,42 +9,11 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 use std::io::Read;
+use std::io::Write;
 
 use mkv::elements::parser::Parser;
 
 mod mkv;
-
-struct MyHandlerState {
-    ctr : i32,
-    indent : usize,
-}
-
-impl mkv::elements::parser::EventsHandler for MyHandlerState {
-    fn event(&mut self, e : mkv::elements::parser::Event) {
-        use mkv::elements::parser::Event::*;
-        
-        match e {
-            End(_) => if self.indent > 0 { self.indent -= 1 },
-            _ => (),
-        }
-        for _ in 0..self.indent { print!(" "); }
-        match e {
-            Begin(x) => println!("element {:?}", x),
-            Data(ref x) => println!("data {:?}", x),
-            End(x) => println!("end {:?}", x),
-            Resync => println!("resync"),
-        }
-        match e {
-            Begin(_) => self.indent += 1,
-            _ => (),
-        }
-        
-        self.ctr+=1;
-    }
-    fn log(&mut self, t : &str) {
-        println!("log: {}", t);
-    }
-}
 
 const BSIZE : usize = 4096;
 fn main() {
@@ -54,9 +23,7 @@ fn main() {
         Err(e) => panic!("Failed to open file q.mkv"),
     };
     
-    let du = MyHandlerState { ctr: 0, indent : 0 };
-    let mut m = mkv::elements::parser::new(du);
-    
+    let mut m = mkv::elements::parser::new(mkv::elements::parser::debug::debug_logger(std::io::stdout()));
     
     loop {
         let mut b = [0; BSIZE];
