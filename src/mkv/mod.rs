@@ -3,8 +3,19 @@ use std::string::String;
 use std::fmt;
 
 pub mod parser;
-pub mod elements;
+pub mod elements_database;
 
+#[derive(Debug,Eq,PartialEq)]
+pub enum ElementType {
+    Master,
+    Unsigned,
+    Signed,
+    TextAscii,
+    TextUtf8,
+    Binary,
+    Float,
+    Date,
+}
 
 pub struct ElementInfo {
     id : u64,
@@ -29,12 +40,12 @@ pub enum ElementEvent<'a> {
     Resync,
 }
 
-pub trait ElementEventsHandler<'a> {
+pub trait ElementEventsHandler {
     fn event(&mut self, e : ElementEvent);
-    fn log(&mut self, m : &'a str);
+    fn log(&mut self, m : &str);
 }
 
-pub trait ElementParser<'b, E : ElementEventsHandler<'b> > {
+pub trait ElementParser<E : ElementEventsHandler > {
     fn initialize(cb : E) -> Self;
     fn feed_bytes(&mut self, bytes : &[u8]);
 }
@@ -42,11 +53,11 @@ pub trait ElementParser<'b, E : ElementEventsHandler<'b> > {
 impl fmt::Debug for ElementInfo {
     fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result
     {
-        let cl = elements::id_to_class(self.id);
-        let typ = elements::class_to_type(&cl);
+        let cl = elements_database::id_to_class(self.id);
+        let typ = elements_database::class_to_type(cl);
         
         let cldesc = match cl {
-            elements::Class::Unknown => format!("0x{:X}", self.id),
+            elements_database::Class::Unknown => format!("0x{:X}", self.id),
             _ => format!("{:?}", cl),
         };
         

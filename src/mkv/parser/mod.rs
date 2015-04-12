@@ -1,7 +1,7 @@
 use mkv::ElementEventsHandler;
 use mkv::ElementParser;
 use mkv::ElementInfo;
-use mkv::elements::{id_to_class,class_to_type};
+use mkv::elements_database::{id_to_class,class_to_type};
 
 use self::parse_ebml_number::parse_ebml_number;
 use self::parse_ebml_number::Result as EbmlParseNumberResult;
@@ -31,7 +31,7 @@ enum ResultOfTryParseSomething<'a> {
     Error,
 }
 
-impl<'b, E:ElementEventsHandler<'b>> ParserState<E> {
+impl<E:ElementEventsHandler> ParserState<E> {
     fn try_parse_something<'a>(&mut self, buf:&'a [u8]) -> ResultOfTryParseSomething<'a> {
         use self::ParserMode::*;
         match self.mode {
@@ -63,7 +63,7 @@ impl<'b, E:ElementEventsHandler<'b>> ParserState<E> {
         use self::ResultOfTryParseSomething::Error as MyError;
         use self::parse_ebml_number::Result::*;
         use self::parse_ebml_number::Mode::*;
-        use mkv::elements::Type::{Master};
+        use mkv::ElementType::{Master};
         use mkv::ElementEvent::{ElementBegin};
         use self::ParserMode;
         
@@ -90,7 +90,7 @@ impl<'b, E:ElementEventsHandler<'b>> ParserState<E> {
         };
         
         let cl  = id_to_class(element_id);
-        let typ = class_to_type(&cl);
+        let typ = class_to_type(cl);
         
                                                         
         let mut restbuf3 = restbuf2;
@@ -145,7 +145,7 @@ impl<'b, E:ElementEventsHandler<'b>> ParserState<E> {
 }
 
 
-impl<'b, E:ElementEventsHandler<'b>> ElementParser<'b, E> for ParserState<E> {
+impl<E:ElementEventsHandler> ElementParser<E> for ParserState<E> {
     fn initialize(cb : E) -> ParserState<E> {
         ParserState {
             accumulator: vec![],
@@ -160,7 +160,7 @@ impl<'b, E:ElementEventsHandler<'b>> ElementParser<'b, E> for ParserState<E> {
     {
         use self::ResultOfTryParseSomething::*;
         
-        //self.cb.log( format!("feed_bytes {} len={}", bytes[0], self.accumulator.len()) );
+        //self.cb.log(format!("feed_bytes {} len={}", bytes[0], self.accumulator.len()).as_str() );
         self.accumulator.push_all(bytes);
         
         let tmpvector = self.accumulator.to_vec();

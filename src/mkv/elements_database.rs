@@ -1,16 +1,6 @@
-#[derive(Debug,Eq,PartialEq)]
-pub enum Type {
-    Master,
-    Unsigned,
-    Signed,
-    TextAscii,
-    TextUtf8,
-    Binary,
-    Float,
-    Date,
-}
+use mkv::ElementType::*;
 
-#[derive(Debug,Eq,PartialEq)]
+#[derive(Debug,Eq,PartialEq,Copy,Clone)]
 pub enum Class {
     EBML,
     EBMLVersion,
@@ -455,10 +445,10 @@ pub fn id_to_class(id:u64) -> Class {
     }
 }
 
-pub fn class_to_id(c:&Class) -> u64 {
+pub fn class_to_id(c:Class) -> u64 {
     use self::Class::*;
     
-    match *c {
+    match c {
         EBML                        => 0x1A45DFA3,
         EBMLVersion                 => 0x00004286,
         EBMLReadVersion             => 0x000042F7,
@@ -679,11 +669,10 @@ pub fn class_to_id(c:&Class) -> u64 {
     }
 }
 
-pub fn class_to_type(c:&Class) -> Type {
-    use self::Type::*;
+pub fn class_to_type(c:Class) -> ::mkv::ElementType {
     use self::Class::*;
     
-    match *c {
+    match c {
         EBML                       => Master       ,
         EBMLVersion                => Unsigned     ,
         EBMLReadVersion            => Unsigned     ,
@@ -902,4 +891,31 @@ pub fn class_to_type(c:&Class) -> Type {
         TagBinary                  => Binary       ,
         Unknown => Binary
     }
+}
+
+
+#[test]
+fn eldb_test__id_to_class() {
+    assert_eq!(id_to_class(0x1A45DFA3), Class::EBML);
+    assert_eq!(id_to_class(0x002EB524), Class::ColourSpace);
+    assert_eq!(id_to_class(0x000000EC), Class::Void);
+    assert_eq!(id_to_class(0x00004285), Class::DocTypeReadVersion);
+    assert_eq!(id_to_class(0x1A45DBBBB), Class::Unknown);
+}
+
+#[test]
+fn eldb_test__class_to_id() {
+    assert_eq!(class_to_id(Class::EBML              ), 0x1A45DFA3);
+    assert_eq!(class_to_id(Class::ColourSpace       ), 0x002EB524);
+    assert_eq!(class_to_id(Class::Void              ), 0x000000EC);
+    assert_eq!(class_to_id(Class::DocTypeReadVersion), 0x00004285);
+}
+
+#[test]
+fn eldb_test__class_to_type() {
+    use ::mkv::ElementType::*;
+    assert_eq!(class_to_type(Class::EBML              ), Master);
+    assert_eq!(class_to_type(Class::ColourSpace       ), Binary);
+    assert_eq!(class_to_type(Class::Void              ), Binary);
+    assert_eq!(class_to_type(Class::DocTypeReadVersion), Unsigned);
 }

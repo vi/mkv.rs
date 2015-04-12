@@ -15,7 +15,7 @@ struct MyHandlerState {
     indent : usize,
 }
 
-impl<'a> mkv::ElementEventsHandler<'a> for MyHandlerState {
+impl mkv::ElementEventsHandler for MyHandlerState {
     fn event(&mut self, e : mkv::ElementEvent) {
         use mkv::ElementEvent::*;
         
@@ -54,7 +54,7 @@ fn main() {
     
     
     loop {
-        let mut b = [0; 4096];
+        let mut b = [0; 1];
         match f.read(&mut b) {
             Ok(x) => m.feed_bytes(&b),
             Err(e) => { println!("error reading: {}", e); break; },
