@@ -23,7 +23,8 @@ fn main() {
         Err(e) => panic!("Failed to open file q.mkv"),
     };
     
-    let mut m = mkv::elements::parser::new(mkv::elements::parser::debug::debug_logger(std::io::stdout()));
+    let mut stdout = std::io::stdout();
+    let mut m = mkv::elements::parser::new(mkv::elements::parser::debug::debug_logger(&mut stdout as &mut Write));
     
     loop {
         let mut b = [0; BSIZE];

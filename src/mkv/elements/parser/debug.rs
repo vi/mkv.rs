@@ -1,16 +1,18 @@
 use std::io::Write;
 
-pub struct DebugPrint<W : Write> {
+// Node: DebugPrint also used in tests
+
+pub struct DebugPrint<'a> {
     ctr : i32,
     indent : usize,
-    w: W,
+    w: &'a mut Write,
 }
 
-pub fn debug_logger<W : Write>(w : W) -> DebugPrint<W> {
+pub fn debug_logger<'a>(w : &'a mut Write) -> DebugPrint<'a> {
     DebugPrint { ctr: 0, indent: 0, w: w }
 }
 
-impl<W:Write> super::EventsHandler for DebugPrint<W> {
+impl<'a> super::EventsHandler for DebugPrint<'a> {
     fn event(&mut self, e :super::Event) {
         use super::Event::*;
         
@@ -18,12 +20,12 @@ impl<W:Write> super::EventsHandler for DebugPrint<W> {
             End(_) => if self.indent > 0 { self.indent -= 1 },
             _ => (),
         }
-        for _ in 0..self.indent { write!(&mut self.w, " "); }
+        for _ in 0..self.indent { write!(self.w, " "); }
         match e {
-            Begin(x)    => writeln!(&mut self.w, "element {:?}", x),
-            Data(ref x) => writeln!(&mut self.w, "data {:?}", x),
-            End(x)      => writeln!(&mut self.w, "end {:?}", x),
-            Resync      => writeln!(&mut self.w, "resync"),
+            Begin(x)    => writeln!(self.w, "element {:?}", x),
+            Data(ref x) => writeln!(self.w, "data {:?}", x),
+            End(x)      => writeln!(self.w, "end {:?}", x),
+            Resync      => writeln!(self.w, "resync"),
         };
         match e {
             Begin(_) => self.indent += 1,
@@ -33,6 +35,6 @@ impl<W:Write> super::EventsHandler for DebugPrint<W> {
         self.ctr+=1;
     }
     fn log(&mut self, t : &str) {
-        write!(self.w, "log: {}", t);
+        println!("log: {}", t);
     }
 }
