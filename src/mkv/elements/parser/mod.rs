@@ -1,7 +1,7 @@
-use mkv::ElementEventsHandler;
-use mkv::ElementParser;
-use mkv::ElementInfo;
-use mkv::elements_database::{id_to_class,class_to_type};
+use super::EventsHandler;
+use super::Parser;
+use super::Info;
+use super::database::{id_to_class,class_to_type};
 
 use self::parse_ebml_number::parse_ebml_number;
 use self::parse_ebml_number::Result as EbmlParseNumberResult;
@@ -19,7 +19,7 @@ pub enum ParserMode {
 pub struct ParserState<E> {
     cb : E,
     accumulator : Vec<u8>,
-    opened_elements_stack : Vec<ElementInfo>,
+    opened_elements_stack : Vec<Info>,
     mode : ParserMode,
     current_offset : u64,
 }
@@ -31,7 +31,7 @@ enum ResultOfTryParseSomething<'a> {
     Error,
 }
 
-impl<E:ElementEventsHandler> ParserState<E> {
+impl<E:EventsHandler> ParserState<E> {
     fn try_parse_something<'a>(&mut self, buf:&'a [u8]) -> ResultOfTryParseSomething<'a> {
         use self::ParserMode::*;
         match self.mode {
@@ -43,15 +43,15 @@ impl<E:ElementEventsHandler> ParserState<E> {
     
     fn try_parse_element_data<'a>(&mut self, buf:&'a [u8], len:usize) -> ResultOfTryParseSomething<'a> {
         use self::ResultOfTryParseSomething::{NoMoreData,KeepGoing};
-        use mkv::ElementEvent::{ElementData};
-        use mkv::SimpleElementContent::
+        use super::Event::{Data};
+        use super::SimpleContent::
                     {Unsigned, Signed, Text, Binary, Float, Date_NanosecondsSince20010101_000000_UTC};
         use self::ParserMode;
         
         if len < buf.len() {
             self.mode = ParserMode::Header;
             let (l,r) = buf.split_at(len);
-            self.cb.event( ElementData( Binary(l) ));
+            self.cb.event( Data( Binary(l) ));
             KeepGoing(r)
         } else {
             return NoMoreData;
@@ -63,8 +63,8 @@ impl<E:ElementEventsHandler> ParserState<E> {
         use self::ResultOfTryParseSomething::Error as MyError;
         use self::parse_ebml_number::Result::*;
         use self::parse_ebml_number::Mode::*;
-        use mkv::ElementType::{Master};
-        use mkv::ElementEvent::{ElementBegin};
+        use super::Type::{Master};
+        use super::Event::{Begin};
         use self::ParserMode;
         
         let (r1, restbuf) = parse_ebml_number(buf, Identifier);
@@ -103,8 +103,8 @@ impl<E:ElementEventsHandler> ParserState<E> {
             }
         };
         
-        let el = ElementInfo{id: element_id, length_including_header: full_element_size, offset: self.current_offset}; 
-        self.cb.event( ElementBegin( &el ));
+        let el = Info{id: element_id, length_including_header: full_element_size, offset: self.current_offset}; 
+        self.cb.event( Begin( &el ));
         self.opened_elements_stack.push(el);
         //self.cb.auxilary_event( Debug (format!("element class={:?} type={:?} off={} clid={}  len={:?}",
         //                                                cl, typ, self.current_offset, element_id, element_size )));
@@ -113,7 +113,7 @@ impl<E:ElementEventsHandler> ParserState<E> {
     }
     
     fn close_expired_elements<'a>(&mut self) {
-        use mkv::ElementEvent::{ElementEnd};
+        use super::Event::{End};
         let mut number_of_elements_to_remove = 0;
         
         for i in self.opened_elements_stack.iter().rev() {
@@ -135,7 +135,7 @@ impl<E:ElementEventsHandler> ParserState<E> {
             for i in self.opened_elements_stack.iter().rev() {
                 j += 1;
                 if j > number_of_elements_to_remove { break; }
-                self.cb.event (ElementEnd(i));
+                self.cb.event (End(i));
             }
         }
         
@@ -145,7 +145,7 @@ impl<E:ElementEventsHandler> ParserState<E> {
 }
 
 
-impl<E:ElementEventsHandler> ElementParser<E> for ParserState<E> {
+impl<E:EventsHandler> Parser<E> for ParserState<E> {
     fn initialize(cb : E) -> ParserState<E> {
         ParserState {
             accumulator: vec![],

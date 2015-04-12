@@ -1,4 +1,4 @@
-use mkv::ElementType::*;
+use super::Type::*;
 
 macro_rules! elements_database {
     ($($cl:ident $t:ident $id:expr),*,) => {
@@ -26,7 +26,7 @@ macro_rules! elements_database {
             }
         }
         
-        pub fn class_to_type(c:Class) -> ::mkv::ElementType {
+        pub fn class_to_type(c:Class) -> super::Type {
             use self::Class::*;
             
             match c {
@@ -277,7 +277,7 @@ fn eldb_test__class_to_id() {
 
 #[test]
 fn eldb_test__class_to_type() {
-    use ::mkv::ElementType::*;
+    use super::Type::*;
     assert_eq!(class_to_type(Class::EBML              ), Master);
     assert_eq!(class_to_type(Class::ColourSpace       ), Binary);
     assert_eq!(class_to_type(Class::Void              ), Binary);

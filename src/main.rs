@@ -6,7 +6,7 @@ use std::io::BufReader;
 use std::path::Path;
 use std::io::Read;
 
-use mkv::ElementParser;
+use mkv::elements::Parser;
 
 mod mkv;
 
@@ -15,23 +15,23 @@ struct MyHandlerState {
     indent : usize,
 }
 
-impl mkv::ElementEventsHandler for MyHandlerState {
-    fn event(&mut self, e : mkv::ElementEvent) {
-        use mkv::ElementEvent::*;
+impl mkv::elements::EventsHandler for MyHandlerState {
+    fn event(&mut self, e : mkv::elements::Event) {
+        use mkv::elements::Event::*;
         
         match e {
-            ElementEnd(_) => if self.indent > 0 { self.indent -= 1 },
+            End(_) => if self.indent > 0 { self.indent -= 1 },
             _ => (),
         }
         for _ in 0..self.indent { print!(" "); }
         match e {
-            ElementBegin(x) => println!("element {:?}", x),
-            ElementData(ref x) => println!("data {:?}", x),
-            ElementEnd(x) => println!("end {:?}", x),
+            Begin(x) => println!("element {:?}", x),
+            Data(ref x) => println!("data {:?}", x),
+            End(x) => println!("end {:?}", x),
             Resync => println!("resync"),
         }
         match e {
-            ElementBegin(_) => self.indent += 1,
+            Begin(_) => self.indent += 1,
             _ => (),
         }
         
@@ -50,7 +50,7 @@ fn main() {
     };
     
     let du = MyHandlerState { ctr: 0, indent : 0 };
-    let mut m : mkv::parser::ParserState<MyHandlerState> = mkv::ElementParser::initialize(du);
+    let mut m : mkv::elements::parser::ParserState<MyHandlerState> = mkv::elements::Parser::initialize(du);
     
     
     loop {
