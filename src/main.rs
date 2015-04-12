@@ -1,11 +1,12 @@
 #![feature(collections,convert,core)]
 #![allow(non_camel_case_types)]
+#![allow(unused_imports)]
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
 use std::io::Read;
 
-use mkv::Parser;
+use mkv::ElementParser;
 
 mod mkv;
 
@@ -14,9 +15,9 @@ struct MyHandlerState {
     indent : usize,
 }
 
-impl mkv::EventsHandler for MyHandlerState {
-    fn auxilary_event(&mut self, e : mkv::AuxilaryEvent) {
-        use mkv::AuxilaryEvent::*;
+impl<'a> mkv::ElementEventsHandler<'a> for MyHandlerState {
+    fn event(&mut self, e : mkv::ElementEvent) {
+        use mkv::ElementEvent::*;
         
         match e {
             ElementEnd(_) => if self.indent > 0 { self.indent -= 1 },
@@ -24,11 +25,10 @@ impl mkv::EventsHandler for MyHandlerState {
         }
         for _ in 0..self.indent { print!(" "); }
         match e {
-            Warning(str) => println!("warning {}", str),
-            Debug(str)   => println!("debug {}: {}", self.ctr, str),
             ElementBegin(x) => println!("element {:?}", x),
             ElementData(ref x) => println!("data {:?}", x),
             ElementEnd(x) => println!("end {:?}", x),
+            Resync => println!("resync"),
         }
         match e {
             ElementBegin(_) => self.indent += 1,
@@ -36,6 +36,9 @@ impl mkv::EventsHandler for MyHandlerState {
         }
         
         self.ctr+=1;
+    }
+    fn log(&mut self, t : &str) {
+        println!("log: {}", t);
     }
 }
 
@@ -47,7 +50,7 @@ fn main() {
     };
     
     let du = MyHandlerState { ctr: 0, indent : 0 };
-    let mut m : mkv::parser::ParserState<MyHandlerState> = mkv::Parser::initialize(du);
+    let mut m : mkv::parser::ParserState<MyHandlerState> = mkv::ElementParser::initialize(du);
     
     
     loop {

@@ -22,19 +22,19 @@ pub enum SimpleElementContent<'a> {
     Date_NanosecondsSince20010101_000000_UTC(i64),
 }
 
-pub enum AuxilaryEvent<'a> {
-    Debug(&'a str),
-    Warning(&'a str),
+pub enum ElementEvent<'a> {
     ElementBegin(&'a ElementInfo),
     ElementData(SimpleElementContent<'a>),
     ElementEnd(&'a ElementInfo),
+    Resync,
 }
 
-pub trait EventsHandler {
-    fn auxilary_event(&mut self, e : AuxilaryEvent);
+pub trait ElementEventsHandler<'a> {
+    fn event(&mut self, e : ElementEvent);
+    fn log(&mut self, m : &'a str);
 }
 
-pub trait Parser<E : EventsHandler> {
+pub trait ElementParser<'b, E : ElementEventsHandler<'b> > {
     fn initialize(cb : E) -> Self;
     fn feed_bytes(&mut self, bytes : &[u8]);
 }

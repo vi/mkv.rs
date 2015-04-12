@@ -1,5 +1,5 @@
-use mkv::EventsHandler;
-use mkv::Parser;
+use mkv::ElementEventsHandler;
+use mkv::ElementParser;
 use mkv::ElementInfo;
 use mkv::elements::{id_to_class,class_to_type};
 
@@ -31,7 +31,7 @@ enum ResultOfTryParseSomething<'a> {
     Error,
 }
 
-impl<E:EventsHandler> ParserState<E> {
+impl<'b, E:ElementEventsHandler<'b>> ParserState<E> {
     fn try_parse_something<'a>(&mut self, buf:&'a [u8]) -> ResultOfTryParseSomething<'a> {
         use self::ParserMode::*;
         match self.mode {
@@ -43,7 +43,7 @@ impl<E:EventsHandler> ParserState<E> {
     
     fn try_parse_element_data<'a>(&mut self, buf:&'a [u8], len:usize) -> ResultOfTryParseSomething<'a> {
         use self::ResultOfTryParseSomething::{NoMoreData,KeepGoing};
-        use mkv::AuxilaryEvent::{ElementData};
+        use mkv::ElementEvent::{ElementData};
         use mkv::SimpleElementContent::
                     {Unsigned, Signed, Text, Binary, Float, Date_NanosecondsSince20010101_000000_UTC};
         use self::ParserMode;
@@ -51,7 +51,7 @@ impl<E:EventsHandler> ParserState<E> {
         if len < buf.len() {
             self.mode = ParserMode::Header;
             let (l,r) = buf.split_at(len);
-            self.cb.auxilary_event( ElementData( Binary(l) ));
+            self.cb.event( ElementData( Binary(l) ));
             KeepGoing(r)
         } else {
             return NoMoreData;
@@ -64,7 +64,7 @@ impl<E:EventsHandler> ParserState<E> {
         use self::parse_ebml_number::Result::*;
         use self::parse_ebml_number::Mode::*;
         use mkv::elements::Type::{Master};
-        use mkv::AuxilaryEvent::{Debug,ElementBegin};
+        use mkv::ElementEvent::{ElementBegin};
         use self::ParserMode;
         
         let (r1, restbuf) = parse_ebml_number(buf, Identifier);
@@ -104,7 +104,7 @@ impl<E:EventsHandler> ParserState<E> {
         };
         
         let el = ElementInfo{id: element_id, length_including_header: full_element_size, offset: self.current_offset}; 
-        self.cb.auxilary_event( ElementBegin( &el ));
+        self.cb.event( ElementBegin( &el ));
         self.opened_elements_stack.push(el);
         //self.cb.auxilary_event( Debug (format!("element class={:?} type={:?} off={} clid={}  len={:?}",
         //                                                cl, typ, self.current_offset, element_id, element_size )));
@@ -113,7 +113,7 @@ impl<E:EventsHandler> ParserState<E> {
     }
     
     fn close_expired_elements<'a>(&mut self) {
-        use mkv::AuxilaryEvent::{Debug,ElementEnd};
+        use mkv::ElementEvent::{ElementEnd};
         let mut number_of_elements_to_remove = 0;
         
         for i in self.opened_elements_stack.iter().rev() {
@@ -121,7 +121,7 @@ impl<E:EventsHandler> ParserState<E> {
                 None => true,
                 Some(l) => i.offset + l > self.current_offset
             };
-            //self.cb.auxilary_event (Debug(format!("dr {:?} {} -> {}", i, self.current_offset, retain).as_slice()));
+            //self.cb.log (format!("dr {:?} {} -> {}", i, self.current_offset, retain).as_slice());
             
             if retain {
                 break;
@@ -135,7 +135,7 @@ impl<E:EventsHandler> ParserState<E> {
             for i in self.opened_elements_stack.iter().rev() {
                 j += 1;
                 if j > number_of_elements_to_remove { break; }
-                self.cb.auxilary_event (ElementEnd(i));
+                self.cb.event (ElementEnd(i));
             }
         }
         
@@ -145,7 +145,7 @@ impl<E:EventsHandler> ParserState<E> {
 }
 
 
-impl<E:EventsHandler> Parser<E> for ParserState<E> {
+impl<'b, E:ElementEventsHandler<'b>> ElementParser<'b, E> for ParserState<E> {
     fn initialize(cb : E) -> ParserState<E> {
         ParserState {
             accumulator: vec![],
@@ -160,16 +160,16 @@ impl<E:EventsHandler> Parser<E> for ParserState<E> {
     {
         use self::ResultOfTryParseSomething::*;
         
-        //self.cb.auxilary_event( Debug (format!("feed_bytes {} len={}", bytes[0], self.accumulator.len()) ));
+        //self.cb.log( format!("feed_bytes {} len={}", bytes[0], self.accumulator.len()) );
         self.accumulator.push_all(bytes);
         
         let tmpvector = self.accumulator.to_vec();
         {
             let mut buf = tmpvector.as_slice();
-            //self.cb.auxilary_event( Debug (format!("feed_bytes2 len={} buflen={}", self.accumulator.len(), buf.len()) ));
+            //self.cb.log( format!("feed_bytes2 len={} buflen={}", self.accumulator.len(), buf.len()) );
             loop {
                 let r = self.try_parse_something(buf);
-                //self.cb.auxilary_event( Debug (format!("try_parse_something={:?}", r)));
+                //self.cb.log( format!("try_parse_something={:?}", r));
                 let newbuf = match r {
                     NoMoreData => break,
                     Error => panic!("Need to implement resyncing"),
@@ -181,6 +181,6 @@ impl<E:EventsHandler> Parser<E> for ParserState<E> {
             }
             self.accumulator = buf.to_vec();
         }
-        //self.cb.auxilary_event( Debug (format!("feed_bytes3 len={}" , self.accumulator.len())));
+        //self.cb.log( format!("feed_bytes3 len={}" , self.accumulator.len()));
     }
 }
