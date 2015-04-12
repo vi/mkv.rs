@@ -1,4 +1,8 @@
-#![feature(collections,convert,core)]
+#![feature(core)]
+#![feature(convert)]
+#![feature(collections)]
+#![feature(slice_patterns)]
+
 #![allow(non_camel_case_types)]
 #![allow(unused_imports)]
 use std::fs::File;
@@ -42,6 +46,7 @@ impl mkv::elements::EventsHandler for MyHandlerState {
     }
 }
 
+const BSIZE : usize = 4096;
 fn main() {
     let path = Path::new("q.mkv");
     let mut f = match File::open(&path) {
@@ -54,9 +59,12 @@ fn main() {
     
     
     loop {
-        let mut b = [0; 1];
+        let mut b = [0; BSIZE];
         match f.read(&mut b) {
-            Ok(x) => m.feed_bytes(&b),
+            Ok(x) => match x {
+                    0 => break,
+                    x => m.feed_bytes(b.split_at(x).0),
+                },
             Err(e) => { println!("error reading: {}", e); break; },
         }
     }
