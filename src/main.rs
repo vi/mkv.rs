@@ -10,7 +10,7 @@ use std::io::BufReader;
 use std::path::Path;
 use std::io::Read;
 
-use mkv::elements::Parser;
+use mkv::elements::parser::Parser;
 
 mod mkv;
 
@@ -19,9 +19,9 @@ struct MyHandlerState {
     indent : usize,
 }
 
-impl mkv::elements::EventsHandler for MyHandlerState {
-    fn event(&mut self, e : mkv::elements::Event) {
-        use mkv::elements::Event::*;
+impl mkv::elements::parser::EventsHandler for MyHandlerState {
+    fn event(&mut self, e : mkv::elements::parser::Event) {
+        use mkv::elements::parser::Event::*;
         
         match e {
             End(_) => if self.indent > 0 { self.indent -= 1 },
@@ -55,7 +55,7 @@ fn main() {
     };
     
     let du = MyHandlerState { ctr: 0, indent : 0 };
-    let mut m : mkv::elements::parser::ParserState<MyHandlerState> = mkv::elements::Parser::initialize(du);
+    let mut m : mkv::elements::parser::ParserState<MyHandlerState> = mkv::elements::parser::Parser::new(du);
     
     
     loop {

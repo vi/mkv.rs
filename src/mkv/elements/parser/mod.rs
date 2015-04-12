@@ -1,18 +1,79 @@
-use super::EventsHandler;
-use super::Parser;
-use super::Info;
 use super::database::{id_to_class,class_to_type};
 
 use self::parse_ebml_number::parse_ebml_number;
 use self::parse_ebml_number::Result as EbmlParseNumberResult;
 use self::parse_ebml_number::Mode   as EbmlParseNumberMode;
 
+use std::vec::Vec;
+use std::string::String;
+use std::fmt;
+
+
 mod parse_ebml_number;
 mod test;
 
 extern crate byteorder;
 
-pub enum ParserMode {
+
+#[derive(Eq,PartialEq,Clone)]
+pub struct Info {
+    id : u64,
+    offset : u64,
+    length_including_header : Option<u64>,
+}
+
+#[derive(Debug,PartialEq,Clone)]
+pub enum SimpleContent<'a> {
+    Unsigned(u64),
+    Signed(i64),
+    Text(&'a str),
+    Binary(&'a [u8]),
+    Float(f64),
+    Date_NanosecondsSince20010101_000000_UTC(i64),
+
+}
+#[derive(Debug,PartialEq,Clone)]
+pub enum Event<'a> {
+    Begin(&'a Info),
+    Data(SimpleContent<'a>),
+    End(&'a Info),
+    Resync,
+}
+
+pub trait EventsHandler {
+    fn event(&mut self, e : Event);
+    fn log(&mut self, m : &str);
+}
+
+pub trait Parser<E : EventsHandler > {
+    fn new(cb : E) -> Self;
+    fn feed_bytes(&mut self, bytes : &[u8]);
+    fn force_resync(&mut self);
+}
+
+impl fmt::Debug for Info {
+    fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result
+    {
+        let cl = super::database::id_to_class(self.id);
+        let typ = super::database::class_to_type(cl);
+        
+        let cldesc = match cl {
+            super::database::Class::Unknown => format!("0x{:X}", self.id),
+            _ => format!("{:?}", cl),
+        };
+        
+        let maybelen = match self.length_including_header {
+            None => format!(""),
+            Some(x) => format!(", rawlen:{}", x),
+        };
+        
+        f.write_str(format!("{}(offset:{}{})", cldesc, self.offset, maybelen).as_slice())
+    }
+}
+
+//////////////////////////////
+
+enum ParserMode {
     Header,
     Data(usize, super::Type),
     Resync,
@@ -58,8 +119,8 @@ impl<E:EventsHandler> ParserState<E> {
     
     fn try_parse_element_data<'a>(&mut self, buf:&'a [u8], len:usize, typ : super::Type) -> ResultOfTryParseSomething<'a> {
         use self::ResultOfTryParseSomething::{NoMoreData,KeepGoing,Error};
-        use super::Event::{Data};
-        use super::SimpleContent::
+        use self::Event::{Data};
+        use self::SimpleContent::
                     {Unsigned, Signed, Text, Binary, Float, Date_NanosecondsSince20010101_000000_UTC};
         use self::ParserMode;
         
@@ -141,7 +202,7 @@ impl<E:EventsHandler> ParserState<E> {
         use self::parse_ebml_number::Result::*;
         use self::parse_ebml_number::Mode::*;
         use super::Type::{Master};
-        use super::Event::{Begin};
+        use self::Event::{Begin};
         use self::ParserMode;
         
         let (r1, restbuf) = parse_ebml_number(buf, Identifier);
@@ -190,7 +251,7 @@ impl<E:EventsHandler> ParserState<E> {
     }
     
     fn close_expired_elements<'a>(&mut self) {
-        use super::Event::{End};
+        use self::Event::{End};
         let mut number_of_elements_to_remove = 0;
         
         for i in self.opened_elements_stack.iter().rev() {
@@ -223,7 +284,7 @@ impl<E:EventsHandler> ParserState<E> {
 
 
 impl<E:EventsHandler> Parser<E> for ParserState<E> {
-    fn initialize(cb : E) -> ParserState<E> {
+    fn new(cb : E) -> ParserState<E> {
         ParserState {
             accumulator: vec![],
             cb : cb,
@@ -254,7 +315,7 @@ impl<E:EventsHandler> Parser<E> for ParserState<E> {
                 //self.cb.log( format!("try_parse_something={:?}", r));
                 let newbuf = match r {
                     NoMoreData => break,
-                    Error => {self.mode = ParserMode::Resync; self.cb.event(super::Event::Resync); buf},
+                    Error => {self.mode = ParserMode::Resync; self.cb.event(self::Event::Resync); buf},
                     KeepGoing(rest) => rest
                 };
                 self.current_offset += (buf.len() - newbuf.len()) as u64;

@@ -1,5 +1,5 @@
-use super::super::Event;
-use super::super::EventsHandler;
+use super::Event;
+use super::EventsHandler;
 
 
 /*struct GatherEvents<'a> {
