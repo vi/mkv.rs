@@ -55,7 +55,7 @@ fn main() {
     };
     
     let du = MyHandlerState { ctr: 0, indent : 0 };
-    let mut m : mkv::elements::parser::ParserState<MyHandlerState> = mkv::elements::parser::Parser::new(du);
+    let mut m = mkv::elements::parser::new(du);
     
     
     loop {

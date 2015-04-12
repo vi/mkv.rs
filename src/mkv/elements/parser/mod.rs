@@ -51,6 +51,12 @@ pub trait Parser<E : EventsHandler > {
     fn force_resync(&mut self);
 }
 
+pub fn new<E : EventsHandler> (cb: E) -> ParserState<E> {
+    self::Parser::new(cb)
+}
+
+//////////////////////////////
+
 impl fmt::Debug for Info {
     fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result
     {
@@ -71,7 +77,6 @@ impl fmt::Debug for Info {
     }
 }
 
-//////////////////////////////
 
 enum ParserMode {
     Header,
