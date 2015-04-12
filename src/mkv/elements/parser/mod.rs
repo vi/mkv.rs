@@ -9,9 +9,11 @@ use self::parse_ebml_number::Mode   as EbmlParseNumberMode;
 
 mod parse_ebml_number;
 
+extern crate byteorder;
+
 pub enum ParserMode {
     Header,
-    Data(usize),
+    Data(usize, super::Type),
     Resync,
 }
 
@@ -53,8 +55,8 @@ impl<E:EventsHandler> ParserState<E> {
         }
     }
     
-    fn try_parse_element_data<'a>(&mut self, buf:&'a [u8], len:usize) -> ResultOfTryParseSomething<'a> {
-        use self::ResultOfTryParseSomething::{NoMoreData,KeepGoing};
+    fn try_parse_element_data<'a>(&mut self, buf:&'a [u8], len:usize, typ : super::Type) -> ResultOfTryParseSomething<'a> {
+        use self::ResultOfTryParseSomething::{NoMoreData,KeepGoing,Error};
         use super::Event::{Data};
         use super::SimpleContent::
                     {Unsigned, Signed, Text, Binary, Float, Date_NanosecondsSince20010101_000000_UTC};
@@ -63,7 +65,69 @@ impl<E:EventsHandler> ParserState<E> {
         if len <= buf.len() {
             self.mode = ParserMode::Header;
             let (l,r) = buf.split_at(len);
-            self.cb.event( Data( Binary(l) ));
+            let da = match typ {
+                super::Type::Master => panic!("Wrong way"),
+                super::Type::Binary => Binary(l),
+                super::Type::Unsigned => {
+                    let mut q : u64 = 0;
+                    let mut it = l.iter();
+                    loop {
+                        match it.next() {
+                            Some(x) => {q = q*0x100 + (*x as u64)},
+                            None => break,
+                        }
+                    };
+                    Unsigned(q)
+                },
+                super::Type::Signed | super::Type::Date => {
+                    let mut q : i64 = 0;
+                    let mut it = l.iter();
+                    match it.next() {
+                        Some(&x) if x >= 0x80 =>   { q = -(x as i64) + 0x80; },
+                        Some(&x)              =>   { q = (x as i64); },
+                        None => {},
+                    }
+                    loop {
+                        match it.next() {
+                            Some(&x) => {q = q*0x100 + (x as i64)},
+                            None => break,
+                        }
+                    };
+                    match typ {
+                        super::Type::Signed => Signed(q),
+                        super::Type::Date => Date_NanosecondsSince20010101_000000_UTC(q),
+                        _ => panic!("Internal error"),
+                    }
+                },
+                super::Type::TextAscii | super::Type::TextUtf8 => {
+                    use std::str::from_utf8;
+                    match from_utf8(l) {
+                        Ok(x) => Text(x),
+                        Err(_) => return Error,
+                    }
+                },
+                super::Type::Float => {
+                    use self::byteorder::ReadBytesExt;
+                    use self::byteorder::BigEndian;
+                    let mut ll = l;
+                    match ll.len() {
+                        8 => 
+                            match ll.read_f64::<BigEndian>() {
+                                Ok(x) => Float(x),
+                                Err(_) => return Error,
+                            },
+                        4 => 
+                            match ll.read_f32::<BigEndian>() {
+                                Ok(x) => Float(x as f64),
+                                Err(_) => return Error,
+                            },
+                        0 => Float(0.0),
+                        10 => { self.cb.log("Error: 10-byte floats are not supported"); Binary(l) }
+                        _ => return Error,
+                    }
+                }
+            };
+            self.cb.event( Data(da) );
             KeepGoing(r)
         } else {
             return NoMoreData;
@@ -109,9 +173,9 @@ impl<E:EventsHandler> ParserState<E> {
         
         self.mode = match typ {
             Master => ParserMode::Header,
-            _ => match element_size {
+            t => match element_size {
                 None => ParserMode::Resync,
-                Some(x) => ParserMode::Data(x as usize),
+                Some(x) => ParserMode::Data(x as usize, t),
             }
         };
         
@@ -184,7 +248,7 @@ impl<E:EventsHandler> Parser<E> for ParserState<E> {
                 let r = match self.mode {
                     Resync => self.try_resync(buf),
                     Header => self.try_parse_element_header(buf),
-                    Data(x) => self.try_parse_element_data(buf, x),
+                    Data(x, t) => self.try_parse_element_data(buf, x, t),
                 };
                 //self.cb.log( format!("try_parse_something={:?}", r));
                 let newbuf = match r {
@@ -201,5 +265,10 @@ impl<E:EventsHandler> Parser<E> for ParserState<E> {
             self.accumulator = buf.to_vec();
         }
         //self.cb.log( format!("feed_bytes3 len={}" , self.accumulator.len()).as_str());
+    }
+    
+    fn force_resync(&mut self)
+    {
+        self.mode = self::ParserMode::Resync;
     }
 }

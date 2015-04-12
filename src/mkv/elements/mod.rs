@@ -6,7 +6,7 @@ pub mod parser;
 pub mod database;
 
 
-#[derive(Debug,Eq,PartialEq)]
+#[derive(Debug,Eq,PartialEq,Clone,Copy)]
 pub enum Type {
     Master,
     Unsigned,
@@ -16,15 +16,16 @@ pub enum Type {
     Binary,
     Float,
     Date,
-}
 
+}
+#[derive(Eq,PartialEq,Clone)]
 pub struct Info {
     id : u64,
     offset : u64,
     length_including_header : Option<u64>,
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug,PartialEq,Clone)]
 pub enum SimpleContent<'a> {
     Unsigned(u64),
     Signed(i64),
@@ -32,8 +33,9 @@ pub enum SimpleContent<'a> {
     Binary(&'a [u8]),
     Float(f64),
     Date_NanosecondsSince20010101_000000_UTC(i64),
-}
 
+}
+#[derive(Debug,PartialEq,Clone)]
 pub enum Event<'a> {
     Begin(&'a Info),
     Data(SimpleContent<'a>),
@@ -49,6 +51,7 @@ pub trait EventsHandler {
 pub trait Parser<E : EventsHandler > {
     fn initialize(cb : E) -> Self;
     fn feed_bytes(&mut self, bytes : &[u8]);
+    fn force_resync(&mut self);
 }
 
 impl fmt::Debug for Info {
