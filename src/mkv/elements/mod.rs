@@ -4,6 +4,7 @@ use std::vec::Vec;
 pub mod database;
 pub mod parser;  // bytes -> events
 pub mod generator; // DOM -> bytes
+pub mod templates;
 
 #[derive(Debug,Eq,PartialEq,Clone,Copy)]
 pub enum Type {
@@ -52,4 +53,4 @@ pub fn el(c: database::Class, d:Vec<Element>) -> Element {
         v.push ( Rc::new(i) );
     }
     Element { class: c, content: ElementContent::Master  (v) }
-}  
+}
