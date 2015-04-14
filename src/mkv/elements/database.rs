@@ -2,7 +2,7 @@ use super::Type::*;
 
 macro_rules! elements_database {
     ($($cl:ident $t:ident $id:expr),*,) => {
-        #[derive(Debug,Eq,PartialEq,Copy,Clone)]
+        #[derive(Debug,Eq,PartialEq,Copy,Ord,PartialOrd,Clone)]
         pub enum Class {
             $($cl),*
             ,Unknown
