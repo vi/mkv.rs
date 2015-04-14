@@ -3,16 +3,38 @@ use std::vec::Vec;
 
 use super::*;
 use super::ElementContent::*;
+extern crate byteorder;
 
 mod test;
 
 pub fn generate(x: &Element) -> Vec<u8>
 {
     let mut r = vec!();
-    let id = super::database::class_to_id(x.class);
+    let id = match x.content {
+        Unknown(id_, _) => id_,
+        _ => super::database::class_to_id(x.class),
+    };
     let mut data : Vec<u8> = match x.content {
         Binary(ref x) => (**x).clone(),
-        _ => panic!("Q"),
+        Unsigned(x) => generate_big_endian_number(x),
+        Signed(x) => generate_big_endian_number_s(x),
+        Float(x) => {
+            use self::byteorder::WriteBytesExt;
+            use self::byteorder::BigEndian;
+            let mut vv = vec![];
+            vv.write_f32::<BigEndian>(x as f32);
+            vv
+        }
+        Text(ref x) => (**x).clone().into_bytes(),
+        Master(ref x) => {
+            let mut vv = vec![];
+            for i in x {
+                vv.append( &mut generate(&*i) );
+            }
+            vv
+        }
+        Date_NanosecondsSince20010101_000000_UTC(x) => generate_big_endian_number_s(x),
+        Unknown(_, ref x) => (**x).clone(),
     };
     
     r.append( &mut generate_ebml_number(id,                Mode::Identifier) );
@@ -75,13 +97,22 @@ fn generate_big_endian_number( x : u64) -> Vec<u8>
     r
 }
 
-/* 
-    if      firstbyte & 0x80 != 0 { more_bytes = 0; mask = 0x7F; }
-    else if firstbyte & 0x40 != 0 { more_bytes = 1; mask = 0x3F; }
-    else if firstbyte & 0x20 != 0 { more_bytes = 2; mask = 0x1F; }
-    else if firstbyte & 0x10 != 0 { more_bytes = 3; mask = 0x0F; }
-    else if firstbyte & 0x08 != 0 { more_bytes = 4; mask = 0x07; }
-    else if firstbyte & 0x04 != 0 { more_bytes = 5; mask = 0x03; }
-    else if firstbyte & 0x02 != 0 { more_bytes = 6; mask = 0x01; }
-    else if firstbyte & 0x01 != 0 { more_bytes = 7; mask = 0x00; }
-*/
+fn generate_big_endian_number_s( x : i64) -> Vec<u8>
+{
+    let mut r = vec!();
+    
+    let numbytes = match x {
+        v if -0x80             <= v && v < 0x80              => 1,
+        v if -0x8000           <= v && v < 0x8000            => 2,
+        v if -0x800000         <= v && v < 0x800000          => 3,
+        v if -0x80000000       <= v && v < 0x80000000        => 4,
+        v if -0x8000000000     <= v && v < 0x8000000000      => 5,
+        v if -0x800000000000   <= v && v < 0x800000000000    => 6,
+        v if -0x80000000000000 <= v && v < 0x80000000000000  => 7,
+        _                                                    => 8,
+    };
+    for i in 0..numbytes {
+        r.push ( ((x >> ((numbytes-i-1)*8)) & 0xFF) as u8 );
+    }
+    r
+}
