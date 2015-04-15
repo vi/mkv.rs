@@ -74,7 +74,7 @@ impl fmt::Debug for Info {
             Some(x) => format!(", rawlen:{}", x),
         };
         
-        f.write_str(format!("{}(offset:{}{})", cldesc, self.offset, maybelen).as_slice())
+        f.write_str(format!("{}(offset:{}{})", cldesc, self.offset, maybelen).as_str())
     }
 }
 
