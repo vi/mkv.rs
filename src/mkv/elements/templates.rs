@@ -106,10 +106,12 @@ pub fn segment_info(
 pub fn matroska_file( segment_info: Element, tracks: Vec<Element>, clusters: Vec<Element> ) -> Vec<u8>
 {
     use super::database::Class::*;
+
     let mut v = vec![];
+
     v.append(&mut super::generator::generate(&ebml_header(false)));
     v.append(&mut super::generator::generate(
-        &mut el(Segment, vec![segment_info, el(Tracks, tracks)] + &clusters)
+        &mut el(Segment, {let mut x =  vec![segment_info, el(Tracks, tracks)]; x.extend(clusters); x})
         ));
     v
 }

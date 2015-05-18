@@ -47,7 +47,7 @@ pub fn el_sig (c: database::Class, d:i64    ) -> Element { Element { class: c, c
 pub fn el_flo (c: database::Class, d:f64    ) -> Element { Element { class: c, content: ElementContent::Float   (         d  ) }}  
 pub fn el_txt (c: database::Class, d:String ) -> Element { Element { class: c, content: ElementContent::Text    (Rc::new( d )) }}  
 pub fn el_date(c: database::Class, d:i64    ) -> Element { Element { class: c, content: ElementContent::Date_NanosecondsSince20010101_000000_UTC(d)}}  
-pub fn el(c: database::Class, d:Vec<Element>) -> Element {
+pub fn el<T>(c: database::Class, d:T) -> Element   where T:IntoIterator<Item=Element> {
     let mut v = vec![];
     for i in d {
         v.push ( Rc::new(i) );
