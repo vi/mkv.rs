@@ -7,7 +7,7 @@ pub fn ebml_header(webm : bool) -> Element {
         el_uns(EBMLReadVersion, 1),
         el_uns(EBMLMaxIDLength,  4),
         el_uns(EBMLMaxSizeLength, 8),
-        el_txt(DocType, String::from_str(if webm { "webm" } else {"matroska"} )),
+        el_txt(DocType, String::from(if webm { "webm" } else {"matroska"} )),
         el_uns(DocTypeVersion, 2),
         el_uns(DocTypeReadVersion, 2),
     ])
