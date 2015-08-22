@@ -15,7 +15,7 @@ use std::io::Write;
 
 use mkv::elements::parser::Parser;
 
-mod mkv;
+extern crate mkv;
 
 const BSIZE : usize = 4096;
 fn main() {
