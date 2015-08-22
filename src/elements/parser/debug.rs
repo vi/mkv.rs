@@ -1,18 +1,14 @@
 use std::io::Write;
 
-// Node: DebugPrint also used in tests
+use std::iter;
 
-pub struct DebugPrint<'a> {
+#[derive(Default)]
+pub struct DebugPrint {
     ctr : i32,
     indent : usize,
-    w: &'a mut Write,
 }
 
-pub fn debug_logger<'a>(w : &'a mut Write) -> DebugPrint<'a> {
-    DebugPrint { ctr: 0, indent: 0, w: w }
-}
-
-impl<'a> super::EventsHandler for DebugPrint<'a> {
+impl super::EventsHandler for DebugPrint {
     fn event(&mut self, e :super::Event) {
         use super::Event::*;
         
@@ -20,12 +16,12 @@ impl<'a> super::EventsHandler for DebugPrint<'a> {
             End(_) => if self.indent > 0 { self.indent -= 1 },
             _ => (),
         }
-        for _ in 0..self.indent { write!(self.w, " "); }
+        let indentstr : String =  iter::repeat(" ").take(self.indent).collect();
         match e {
-            Begin(x)    => writeln!(self.w, "element {:?}", x),
-            Data(ref x) => writeln!(self.w, "data {:?}", x),
-            End(x)      => writeln!(self.w, "end {:?}", x),
-            Resync      => writeln!(self.w, "resync"),
+            Begin(x)    => debug!("{}element {:?}", indentstr, x),
+            Data(ref x) => debug!("{}data {:?}", indentstr, x),
+            End(x)      => debug!("{}end {:?}", indentstr, x),
+            Resync      => debug!("{}resync", indentstr),
         };
         match e {
             Begin(_) => self.indent += 1,
@@ -33,8 +29,5 @@ impl<'a> super::EventsHandler for DebugPrint<'a> {
         }
         
         self.ctr+=1;
-    }
-    fn log(&mut self, t : &str) {
-        println!("log: {}", t);
     }
 }

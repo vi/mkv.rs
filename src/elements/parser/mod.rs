@@ -43,7 +43,6 @@ pub enum Event<'a> {
 
 pub trait EventsHandler {
     fn event(&mut self, e : Event);
-    fn log(&mut self, m : &str);
 }
 
 pub trait Parser<E : EventsHandler > {
@@ -190,7 +189,7 @@ impl<E:EventsHandler> ParserState<E> {
                                 Err(_) => return Error,
                             },
                         0 => Float(0.0),
-                        10 => { self.cb.log("Error: 10-byte floats are not supported"); Binary(l) }
+                        10 => { error!("Error: 10-byte floats are not supported"); Binary(l) }
                         _ => return Error,
                     }
                 }

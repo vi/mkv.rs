@@ -26,7 +26,8 @@ fn main() {
     };
     
     let mut stdout = std::io::stdout();
-    let mut m = mkv::elements::parser::new(mkv::elements::parser::debug::debug_logger(&mut stdout as &mut Write));
+    let element_logger : mkv::elements::parser::debug::DebugPrint = Default::default();
+    let mut m = mkv::elements::parser::new(element_logger);
     
     loop {
         let mut b = [0; BSIZE];
