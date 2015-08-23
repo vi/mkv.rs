@@ -28,16 +28,16 @@ macro_rules! t {
     ($input:expr, $output:expr) => {{{
         let mut s : String = Default::default();
         {
-            let strdumper = SerializeToStr { s:  &mut s };
-            let mut p = super::new( strdumper );
+            let mut strdumper = SerializeToStr { s:  &mut s };
+            let mut p = super::new( &mut strdumper );
             p.feed_bytes(&$input);
         }
         assert_eq!(s, $output);
     }{
         let mut s : String = Default::default();
         {
-            let strdumper = SerializeToStr { s: &mut s };
-            let mut p = super::new( strdumper );
+            let mut strdumper = SerializeToStr { s: &mut s };
+            let mut p = super::new( &mut strdumper );
             for i in $input.iter() {
                 p.feed_bytes(&[*i]);
             }

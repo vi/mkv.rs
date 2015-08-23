@@ -18,7 +18,7 @@ pub struct Builder {
 }
 
 impl Builder {
-    fn captured_elements(&self) -> &Vec<Rc<Element>> {
+    pub fn captured_elements(&self) -> &Vec<Rc<Element>> {
         &self.ce 
     }
 }

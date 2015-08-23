@@ -12,6 +12,7 @@ use std::io::Write;
 use std::env::args;
 
 use mkv::elements::parser::Parser;
+use mkv::elements::parser::EventsHandler;
 
 extern crate mkv;
 extern crate log;
@@ -35,17 +36,22 @@ fn main() {
    
     
     //let mut stdout = std::io::stdout();
-    let mut element_logger = mkv::elements::parser::debug::DebugPrint::new(log::LogLevel::Info);
-    let mut m = mkv::elements::parser::new(&mut element_logger);
-    
-    loop {
-        let mut b = [0; BSIZE];
-        match f.read(&mut b) {
-            Ok(x) => match x {
-                    0 => break,
-                    x => m.feed_bytes(b.split_at(x).0),
-                },
-            Err(e) => { println!("error reading: {}", e); break; },
+    let element_logger = mkv::elements::parser::debug::DebugPrint::new(log::LogLevel::Info);
+    let mut dom_builder : mkv::elements::builder::Builder = Default::default();
+    {
+        let mut m = mkv::elements::parser::new(&mut dom_builder);
+        
+        loop {
+            let mut b = [0; BSIZE];
+            match f.read(&mut b) {
+                Ok(x) => match x {
+                        0 => break,
+                        x => m.feed_bytes(b.split_at(x).0),
+                    },
+                Err(e) => { println!("error reading: {}", e); break; },
+            }
         }
     }
+    
+    println!("{:?}", dom_builder.captured_elements());
 }

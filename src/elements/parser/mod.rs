@@ -45,13 +45,13 @@ pub trait EventsHandler {
     fn event(&mut self, e : Event);
 }
 
-pub trait Parser<E : EventsHandler > {
-    fn new(cb : E) -> Self;
+pub trait Parser<'q, E : EventsHandler + ?Sized + 'q> {
+    fn new(cb : &'q mut E) -> Self;
     fn feed_bytes(&mut self, bytes : &[u8]);
     fn force_resync(&mut self);
 }
 
-pub fn new<E : EventsHandler> (cb: E) -> ParserState<E> {
+pub fn new<E : EventsHandler + ?Sized> (cb: &mut E) -> ParserState<E> {
     self::Parser::new(cb)
 }
 
@@ -85,8 +85,8 @@ enum ParserMode {
 }
 
 
-pub struct ParserState<E> {
-    cb : E,
+pub struct ParserState<'q, E : EventsHandler + ?Sized + 'q> {
+    cb : &'q mut E,
     accumulator : Vec<u8>,
     opened_elements_stack : Vec<Info>,
     mode : ParserMode,
@@ -100,7 +100,7 @@ enum ResultOfTryParseSomething<'a> {
     Error,
 }
 
-impl<E:EventsHandler> ParserState<E> {
+impl<'q, E:EventsHandler+?Sized+'q> ParserState<'q, E> {
 
     fn try_resync<'a>(&mut self, buf:&'a [u8]) -> ResultOfTryParseSomething<'a> {
         use self::ResultOfTryParseSomething::*;
@@ -138,6 +138,7 @@ impl<E:EventsHandler> ParserState<E> {
                 super::Type::Unsigned => {
                     let mut q : u64 = 0;
                     let mut it = l.iter();
+                    if l.len() > 8 { return Error; }
                     loop {
                         match it.next() {
                             Some(x) => {q = q*0x100 + (*x as u64)},
@@ -149,6 +150,7 @@ impl<E:EventsHandler> ParserState<E> {
                 super::Type::Signed | super::Type::Date => {
                     let mut q : i64 = 0;
                     let mut it = l.iter();
+                    if l.len() > 8 { return Error; }
                     match it.next() {
                         Some(&x) if x >= 0x80 =>   { q = -(x as i64) + 0x80; },
                         Some(&x)              =>   { q = (x as i64); },
@@ -289,8 +291,8 @@ impl<E:EventsHandler> ParserState<E> {
 }
 
 
-impl<E:EventsHandler> Parser<E> for ParserState<E> {
-    fn new(cb : E) -> ParserState<E> {
+impl<'q, E : EventsHandler + ?Sized + 'q> Parser<'q, E> for ParserState<'q, E> {
+    fn new(cb : &'q mut E) -> ParserState<'q, E> {
         ParserState {
             accumulator: vec![],
             cb : cb,
