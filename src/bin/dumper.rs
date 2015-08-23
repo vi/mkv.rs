@@ -16,9 +16,18 @@ use std::io::Write;
 use mkv::elements::parser::Parser;
 
 extern crate mkv;
+extern crate log;
+
+struct SimpleLogger;
+impl log::Log for SimpleLogger {
+    fn enabled(&self, metadata: &log::LogMetadata) -> bool { true     }
+    fn log(&self, record: &log::LogRecord) { println!("{}", record.args());  }
+}
 
 const BSIZE : usize = 4096;
 fn main() {
+    log::set_logger(|ll| { ll.set(log::LogLevelFilter::Debug); Box::new(SimpleLogger) });
+
     let path = Path::new("q.mkv");
     let mut f = match File::open(&path) {
         Ok(x) => BufReader::new(x),
