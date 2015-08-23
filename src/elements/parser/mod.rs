@@ -10,7 +10,7 @@ use std::fmt;
 
 
 mod parse_ebml_number;
-mod test;
+#[cfg(test)] mod test;
 pub mod debug;
 
 extern crate byteorder;
@@ -18,9 +18,9 @@ extern crate byteorder;
 
 #[derive(Eq,PartialEq,Clone)]
 pub struct Info {
-    id : u64,
-    offset : u64,
-    length_including_header : Option<u64>,
+    pub id : u64,
+    pub offset : u64,
+    pub length_including_header : Option<u64>,
 }
 
 #[derive(Debug,PartialEq,Clone)]
@@ -30,7 +30,7 @@ pub enum SimpleContent<'a> {
     Text(&'a str),
     Binary(&'a [u8]),
     Float(f64),
-    Date_NanosecondsSince20010101_000000_UTC(i64),
+    MatroskaDate(i64), // Nanoseconds since 20010101_000000_UTC
 
 }
 #[derive(Debug,PartialEq,Clone)]
@@ -126,7 +126,7 @@ impl<E:EventsHandler> ParserState<E> {
         use self::ResultOfTryParseSomething::{NoMoreData,KeepGoing,Error};
         use self::Event::{Data};
         use self::SimpleContent::
-                    {Unsigned, Signed, Text, Binary, Float, Date_NanosecondsSince20010101_000000_UTC};
+                    {Unsigned, Signed, Text, Binary, Float, MatroskaDate};
         use self::ParserMode;
         
         if len <= buf.len() {
@@ -162,7 +162,7 @@ impl<E:EventsHandler> ParserState<E> {
                     };
                     match typ {
                         super::Type::Signed => Signed(q),
-                        super::Type::Date => Date_NanosecondsSince20010101_000000_UTC(q),
+                        super::Type::Date => MatroskaDate(q),
                         _ => panic!("Internal error"),
                     }
                 },
@@ -264,7 +264,7 @@ impl<E:EventsHandler> ParserState<E> {
                 None => true,
                 Some(l) => i.offset + l > self.current_offset
             };
-            //self.cb.log (format!("dr {:?} {} -> {}", i, self.current_offset, retain).as_str());
+            // println!("dr {:?} {} -> {}", i, self.current_offset, retain);
             
             if retain {
                 break;
@@ -278,6 +278,7 @@ impl<E:EventsHandler> ParserState<E> {
             for i in self.opened_elements_stack.iter().rev() {
                 j += 1;
                 if j > number_of_elements_to_remove { break; }
+                // println!("sending end {:?}", i);
                 self.cb.event (End(i));
             }
         }
@@ -325,6 +326,13 @@ impl<E:EventsHandler> Parser<E> for ParserState<E> {
                 };
                 self.current_offset += (buf.len() - newbuf.len()) as u64;
                 //self.cb.log(format!("current offset: {}", self.current_offset).as_str());
+                
+                if let KeepGoing(_) = r {
+                    if let Data(0, t) = self.mode {
+                        self.try_parse_element_data(newbuf, 0, t);
+                    };
+                };
+                
                 self.close_expired_elements();
                 buf = newbuf;
                 //self.cb.log(format!("more to parse: {}", newbuf.len()).as_str());

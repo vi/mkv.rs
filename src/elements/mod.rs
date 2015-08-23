@@ -3,6 +3,7 @@ use std::vec::Vec;
 
 pub mod database;
 pub mod parser;  // bytes -> events
+pub mod builder; // events -> DOM
 pub mod generator; // DOM -> bytes
 pub mod templates;
 
@@ -29,7 +30,7 @@ pub enum ElementContent {
     Binary(Rc<Vec<u8>>),
     Text(Rc<String>),
     Float(f64),
-    Date_NanosecondsSince20010101_000000_UTC(i64),
+    MatroskaDate(i64), // Nanoseconds since 20010101_000000_UTC
     Unknown(u64, Rc<Vec<u8>>)
 }
 
@@ -46,7 +47,7 @@ pub fn el_uns (c: database::Class, d:u64    ) -> Element { Element { class: c, c
 pub fn el_sig (c: database::Class, d:i64    ) -> Element { Element { class: c, content: ElementContent::Signed  (         d  ) }}  
 pub fn el_flo (c: database::Class, d:f64    ) -> Element { Element { class: c, content: ElementContent::Float   (         d  ) }}  
 pub fn el_txt (c: database::Class, d:String ) -> Element { Element { class: c, content: ElementContent::Text    (Rc::new( d )) }}  
-pub fn el_date(c: database::Class, d:i64    ) -> Element { Element { class: c, content: ElementContent::Date_NanosecondsSince20010101_000000_UTC(d)}}  
+pub fn el_date(c: database::Class, d:i64    ) -> Element { Element { class: c, content: ElementContent::MatroskaDate(d)}}  
 pub fn el<T>(c: database::Class, d:T) -> Element   where T:IntoIterator<Item=Element> {
     let mut v = vec![];
     for i in d {

@@ -101,3 +101,9 @@ t!( [ 0x44, 0x89, 0x84, 0x42, 0xe8, 0x00, 0x00 ],
 #[test] fn t6() {
 t!( [ 0x86, 0x85, 0x41, 0x42, 0x43, 0x44, 0x45 ], 
         "b CodecID(offset:0, rawlen:7),d Text(\"ABCDE\"),e CodecID(offset:0, rawlen:7),");}
+        
+#[test] fn t7() {
+t!( [0xA3, 0x80] , "b SimpleBlock(offset:0, rawlen:2),d Binary([]),e SimpleBlock(offset:0, rawlen:2),");}
+
+#[test] fn t8() {
+t!( [0x1a, 0x45, 0xdf, 0xa3, 0x80] , "b EBML(offset:0, rawlen:5),e EBML(offset:0, rawlen:5),");}

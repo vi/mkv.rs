@@ -33,7 +33,7 @@ pub fn generate(x: &Element) -> Vec<u8>
             }
             vv
         }
-        Date_NanosecondsSince20010101_000000_UTC(x) => generate_big_endian_number_s(x),
+        MatroskaDate(x) => generate_big_endian_number_s(x),
         Unknown(_, ref x) => (**x).clone(),
     };
     
