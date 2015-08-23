@@ -35,7 +35,7 @@ fn main() {
     };
     
     let mut stdout = std::io::stdout();
-    let element_logger : mkv::elements::parser::debug::DebugPrint = Default::default();
+    let element_logger = mkv::elements::parser::debug::DebugPrint::new(log::LogLevel::Info);
     let mut m = mkv::elements::parser::new(element_logger);
     
     loop {

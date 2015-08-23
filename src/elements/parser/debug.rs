@@ -2,10 +2,16 @@ use std::io::Write;
 
 use std::iter;
 
-#[derive(Default)]
 pub struct DebugPrint {
     ctr : i32,
     indent : usize,
+    ll : ::log::LogLevel,
+}
+
+impl DebugPrint {
+    pub fn new(log_level : ::log::LogLevel) -> Self {
+        DebugPrint { ctr: 0, indent: 0, ll: log_level }
+    }
 }
 
 impl super::EventsHandler for DebugPrint {
@@ -18,10 +24,10 @@ impl super::EventsHandler for DebugPrint {
         }
         let indentstr : String =  iter::repeat(" ").take(self.indent).collect();
         match e {
-            Begin(x)    => debug!("{}element {:?}", indentstr, x),
-            Data(ref x) => debug!("{}data {:?}", indentstr, x),
-            End(x)      => debug!("{}end {:?}", indentstr, x),
-            Resync      => debug!("{}resync", indentstr),
+            Begin(x)    => log!(self.ll, "{}element {:?}", indentstr, x),
+            Data(ref x) => log!(self.ll, "{}data {:?}", indentstr, x),
+            End(x)      => log!(self.ll, "{}end {:?}", indentstr, x),
+            Resync      => log!(self.ll, "{}resync", indentstr),
         };
         match e {
             Begin(_) => self.indent += 1,
