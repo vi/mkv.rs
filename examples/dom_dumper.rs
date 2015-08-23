@@ -53,5 +53,5 @@ fn main() {
         }
     }
     
-    println!("{:?}", dom_builder.captured_elements());
+    println!("{:#?}", dom_builder.captured_elements());
 }
