@@ -3,6 +3,10 @@
 name = "mkv"
 version = "0.0.1"
 authors = ["Vitaly '_Vi' Shukela"]
+license-file = "LICENSE"
+homepage = "https://github.com/vi/mkv.rs"
+repository = "https://github.com/vi/mkv.rs"
+description = "[incomplete yet] Matroska (mkv,webm) files parser and generator implemented in Rust"
 
 [dependencies]
 byteorder = "0.3.5"
