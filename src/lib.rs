@@ -11,9 +11,12 @@
 #![feature(slice_patterns)]
 #![feature(vec_push_all)]
 #![feature(append)]
+#![cfg_attr(feature = "rustc-serialize", feature(custom_derive))]
 
 
 #[macro_use]
 extern crate log;
+
+#[cfg(feature = "rustc-serialize")] extern crate rustc_serialize;
 
 pub mod elements;

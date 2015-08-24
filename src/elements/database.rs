@@ -1,12 +1,16 @@
 use super::Type::*;
 
+
 macro_rules! elements_database {
     ($($cl:ident $t:ident $id:expr),*,) => {
         #[derive(Debug,Eq,PartialEq,Copy,Ord,PartialOrd,Clone)]
+        // XXX https://github.com/rust-lang/rust/issues/22250
+        #[cfg_attr(feature = "rustc-serialize", derive(RustcEncodable, RustcDecodable))]
         pub enum Class {
             $($cl),*
             ,Unknown
         }
+        
         
         pub fn id_to_class(id:u64) -> Class {
             use self::Class::*;

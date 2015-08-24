@@ -23,6 +23,7 @@ pub enum Type {
 // Element DOM
 
 #[derive(PartialEq,Debug,PartialOrd,Clone)]
+#[cfg_attr(feature = "rustc-serialize", derive(RustcEncodable, RustcDecodable))]
 pub enum ElementContent {
     Master(Vec<Rc<Element>>),
     Unsigned(u64),
@@ -35,6 +36,7 @@ pub enum ElementContent {
 }
 
 #[derive(PartialEq,Debug,PartialOrd,Clone)]
+#[cfg_attr(feature = "rustc-serialize", derive(RustcEncodable, RustcDecodable))]
 pub struct Element {
     class : database::Class,
     content : ElementContent,
