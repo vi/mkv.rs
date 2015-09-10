@@ -70,7 +70,7 @@ impl EventsHandler for Builder {
                 self.ce.push(Rc::new(el));
                 self.in_middle = false;
             },
-            Resync      => debug!("resync"),
+            Resync      => warn!("Error in matroska file. DOM will be garbled."),
         };
     }
 }
