@@ -38,8 +38,8 @@ pub enum ElementContent {
 #[derive(PartialEq,Debug,PartialOrd,Clone)]
 #[cfg_attr(feature = "rustc-serialize", derive(RustcEncodable, RustcDecodable))]
 pub struct Element {
-    class : database::Class,
-    content : ElementContent,
+    pub class : database::Class,
+    pub content : ElementContent,
 }
 
 // Cosy constructors
