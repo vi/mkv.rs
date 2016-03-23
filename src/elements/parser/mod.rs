@@ -308,7 +308,7 @@ impl<'q, E : EventsHandler + ?Sized + 'q> Parser<'q, E> for ParserState<'q, E> {
         use self::ParserMode::*;
         
         //self.cb.log(format!("feed_bytes {} len={}", bytes[0], self.accumulator.len()).as_str() );
-        self.accumulator.push_all(bytes);
+        self.accumulator.extend_from_slice(bytes);
         
         let tmpvector = self.accumulator.to_vec();
         {
