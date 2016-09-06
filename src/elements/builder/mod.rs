@@ -21,6 +21,10 @@ impl Builder {
     pub fn captured_elements(&self) -> &Vec<Rc<Element>> {
         &self.ce 
     }
+    
+    pub fn into_captured_elements(self) -> Vec<Rc<Element>> {
+        self.ce
+    }
 }
 
 impl EventsHandler for Builder {
