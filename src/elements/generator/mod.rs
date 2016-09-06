@@ -50,7 +50,6 @@ enum Mode {
 
 fn generate_ebml_number(x : u64, inputmode : Mode) -> Vec<u8>
 {
-    
     match inputmode {
         Mode::Identifier => generate_big_endian_number(x),
         Mode::Unsigned => {
@@ -68,7 +67,7 @@ fn generate_ebml_number(x : u64, inputmode : Mode) -> Vec<u8>
                 _                                             => (8, 0x01),
             };
             
-            r.push( bit | ((x >> (numbytes-1)) as u8) );
+            r.push( bit | ((x >> (numbytes-1)*8) as u8) );
             
             for i in 1..numbytes {
                 r.push ( ((x >> ((numbytes-i-1)*8)) & 0xFF) as u8 );
