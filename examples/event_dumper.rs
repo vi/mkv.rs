@@ -13,7 +13,14 @@ use mkv::elements::parser::Parser;
 extern crate mkv;
 extern crate log;
 
-mod simplelogger;
+mod simplelogger{
+    pub struct SimpleLogger;
+    impl ::log::Log for SimpleLogger {
+        fn enabled(&self, _: &::log::LogMetadata) -> bool { true     }
+        fn log(&self, record: &::log::LogRecord) { println!("{}", record.args());  }
+    }
+}
+
 
 const BSIZE : usize = 4096;
 fn main() {
