@@ -14,7 +14,8 @@ use super::generator::generate;
 use super::el_bin;
 
 pub enum MidlevelEvent {
-    ElementHeader(Class),
+    EnterElement(Class),
+    LeaveElement(Class),
     Element(Rc<Element>),
     Resync,
 }
@@ -56,7 +57,7 @@ impl<H:MidlevelEventHandler> EventsHandler for MidlevelParser<H> {
                 if let Some(ref mut b) = self.b {
                     b.event(e);
                 } else {
-                    let choice2 = self.h.handle(MidlevelEvent::ElementHeader(id_to_class(x.id)));
+                    let choice2 = self.h.handle(MidlevelEvent::EnterElement(id_to_class(x.id)));
                     match choice2 {
                         WhatToDo::GoOn => (),
                         WhatToDo::Build => {
@@ -85,7 +86,7 @@ impl<H:MidlevelEventHandler> EventsHandler for MidlevelParser<H> {
                         self.b = Some(b);
                     }
                 } else {
-                    // ignore it
+                    choice = self.h.handle(MidlevelEvent::LeaveElement(id_to_class(x.id)));
                 }
                 
             }
@@ -121,7 +122,7 @@ impl<W:Write> MidlevelEventsToFile<W> {
 impl<W:Write> MidlevelEventHandler for MidlevelEventsToFile<W> {
     fn handle(&mut self, e: MidlevelEvent) -> WhatToDo {
         match e {
-            MidlevelEvent::ElementHeader(klass) => {
+            MidlevelEvent::EnterElement(klass) => {
                 if (klass == Class::Segment) {
                     self.w.write(&generate_ebml_number(class_to_id(klass), EbmlNumberMode::Identifier)).unwrap();
                     self.w.write(b"\xFF").unwrap(); // unknown length
@@ -133,6 +134,9 @@ impl<W:Write> MidlevelEventHandler for MidlevelEventsToFile<W> {
             }
             MidlevelEvent::Element(x) => {
                 self.w.write(&generate(&x)).unwrap();
+                WhatToDo::GoOn
+            }
+            MidlevelEvent::LeaveElement(_) => { 
                 WhatToDo::GoOn
             }
             MidlevelEvent::Resync => {
