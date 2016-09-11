@@ -58,3 +58,19 @@ pub fn el<T>(c: database::Class, d:T) -> Element   where T:IntoIterator<Item=Ele
     }
     Element { class: c, content: ElementContent::Master  (v) }
 }
+
+pub fn typical_matroska_header(webm : bool) -> Element { 
+    use self::database::Class::*;
+    use self::ElementContent::{Unsigned,Text,Master};
+    let doctype = if webm { "webm" } else { "matroska"}.to_string();
+    Element { class: EBML, content: Master(vec![
+        Rc::new(Element {class: EBMLVersion,       content: Unsigned(1)}),
+        Rc::new(Element {class: EBMLReadVersion,   content: Unsigned(1)}),
+        Rc::new(Element {class: EBMLMaxIDLength,   content: Unsigned(4)}),
+        Rc::new(Element {class: EBMLMaxSizeLength, content: Unsigned(8)}),
+        Rc::new(Element {class: DocType,           content: Text(Rc::new(doctype))}),
+        Rc::new(Element {class: DocTypeVersion,    content: Unsigned(2)}),
+        Rc::new(Element {class: DocTypeReadVersion,content: Unsigned(2)}),
+    ])}
+}
+
