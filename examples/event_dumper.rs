@@ -13,15 +13,11 @@ use mkv::elements::parser::Parser;
 extern crate mkv;
 extern crate log;
 
-struct SimpleLogger;
-impl log::Log for SimpleLogger {
-    fn enabled(&self, _: &log::LogMetadata) -> bool { true     }
-    fn log(&self, record: &log::LogRecord) { println!("{}", record.args());  }
-}
+mod simplelogger;
 
 const BSIZE : usize = 4096;
 fn main() {
-    let _ = log::set_logger(|ll| { ll.set(log::LogLevelFilter::Debug); Box::new(SimpleLogger) });
+    let _ = log::set_logger(|ll| { ll.set(log::LogLevelFilter::Debug); Box::new(simplelogger::SimpleLogger) });
 
     let mut reader : Box<Read> = match args().len() {
         1 => Box::new(std::io::stdin()),

@@ -1,7 +1,10 @@
 use std::rc::Rc;
 use std::vec::Vec;
 
+use std::io::Write;
+
 use super::*;
+use super::database::Class;
 use super::ElementContent::*;
 extern crate byteorder;
 
@@ -22,7 +25,7 @@ pub fn generate(x: &Element) -> Vec<u8>
             use self::byteorder::WriteBytesExt;
             use self::byteorder::BigEndian;
             let mut vv = vec![];
-            vv.write_f32::<BigEndian>(x as f32);
+            vv.write_f32::<BigEndian>(x as f32).unwrap();
             vv
         }
         Text(ref x) => (**x).clone().into_bytes(),
@@ -37,22 +40,22 @@ pub fn generate(x: &Element) -> Vec<u8>
         Unknown(_, ref x) => (**x).clone(),
     };
     
-    r.append( &mut generate_ebml_number(id,                Mode::Identifier) );
-    r.append( &mut generate_ebml_number(data.len() as u64, Mode::Unsigned) );
+    r.append( &mut generate_ebml_number(id,                EbmlNumberMode::Identifier) );
+    r.append( &mut generate_ebml_number(data.len() as u64, EbmlNumberMode::Unsigned) );
     r.append( &mut data );
     r
 }
 
-enum Mode {
+pub enum EbmlNumberMode {
     Unsigned,
     Identifier,
 }
 
-fn generate_ebml_number(x : u64, inputmode : Mode) -> Vec<u8>
+pub fn generate_ebml_number(x : u64, inputmode : EbmlNumberMode) -> Vec<u8>
 {
     match inputmode {
-        Mode::Identifier => generate_big_endian_number(x),
-        Mode::Unsigned => {
+        EbmlNumberMode::Identifier => generate_big_endian_number(x),
+        EbmlNumberMode::Unsigned => {
             let mut r = vec!();
             if x == 0xFFFFFFFFFFFFFFFF { return vec!(0xFF); }
             
@@ -77,7 +80,7 @@ fn generate_ebml_number(x : u64, inputmode : Mode) -> Vec<u8>
     }
 }
 
-fn generate_big_endian_number( x : u64) -> Vec<u8>
+pub fn generate_big_endian_number( x : u64) -> Vec<u8>
 {
     let mut r = vec!();
     let numbytes = match x {
@@ -96,7 +99,7 @@ fn generate_big_endian_number( x : u64) -> Vec<u8>
     r
 }
 
-fn generate_big_endian_number_s( x : i64) -> Vec<u8>
+pub fn generate_big_endian_number_s( x : i64) -> Vec<u8>
 {
     let mut r = vec!();
     
@@ -115,3 +118,40 @@ fn generate_big_endian_number_s( x : i64) -> Vec<u8>
     }
     r
 }
+
+/*
+pub struct EventsToFile<W:Write> {
+   w : W,
+}
+
+impl<W:Write> EventsToFile<W> {
+    pub fn new(w_ : W) -> Self {
+        EventsToFile { w: w_ }
+    }
+    
+    pub fn borrow_file    (&self)     -> &W     {     &self.w }
+    pub fn borrow_file_mut(&mut self) -> &mut W { &mut self.w }
+    pub fn into_file      (self)      -> W      {      self.w }
+}
+
+impl<W:Write> super::parser::EventsHandler for EventsToFile<W> {
+    fn event(&mut self, e : super::parser::Event) {
+        use super::parser::Event::*;
+
+        match e {
+            Begin(x)    => {
+                self.w.write(&generate_big_endian_number(x.id)).unwrap();
+                // Problem: we don't know what length should be here.
+                // Play with offsets? (remember current offset and adjust 
+                // size's size or insert Void blocks to keep up)
+                x.length_including_header;
+            },
+            Data(ref x) => warn!("data {:?}", x),
+            End(x)      => (),
+            Resync      => {
+                self.w.write(&generate(&el_bin(Class::Void, vec![0xFF]))).unwrap();
+            },
+        };
+    }
+}
+*/

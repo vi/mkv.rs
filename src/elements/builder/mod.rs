@@ -25,6 +25,8 @@ impl Builder {
     pub fn into_captured_elements(self) -> Vec<Rc<Element>> {
         self.ce
     }
+    
+    pub fn new() -> Self { Default::default() }
 }
 
 impl EventsHandler for Builder {

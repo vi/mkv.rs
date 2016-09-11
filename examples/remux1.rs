@@ -17,22 +17,24 @@ extern crate log;
 mod simplelogger;
 
 const BSIZE : usize = 4096;
-fn main() {
+fn main() {  
     let _ = log::set_logger(|ll| { ll.set(log::LogLevelFilter::Debug); Box::new(simplelogger::SimpleLogger) });
+    
 
-    let mut reader : Box<Read> = match args().len() {
+    let reader : Box<Read> = match args().len() {
         1 => Box::new(std::io::stdin()),
         2 => Box::new(File::open(Path::new(args().nth(1).unwrap().as_str())).expect("Failed to open the file")),
-        _ => panic!("Usage: dom_dumper [filename.mkv]")
+        _ => panic!("Usage: remux1 [input.mkv] > output.mkv")
     };
     let mut f = BufReader::new(reader);
    
     
-    //let mut stdout = std::io::stdout();
-    let element_logger = mkv::elements::parser::debug::DebugPrint::new(log::LogLevel::Info);
-    let mut dom_builder : mkv::elements::builder::Builder = Default::default();
+    let stdout = std::io::stdout();
+    let events_to_file = mkv::elements::midlevel::MidlevelEventsToFile::new(stdout);
+    let mut midlevel = mkv::elements::midlevel::MidlevelParser::new(events_to_file);
+    
     {
-        let mut m = mkv::elements::parser::new(&mut dom_builder);
+        let mut m = mkv::elements::parser::new(&mut midlevel);
         
         loop {
             let mut b = [0; BSIZE];
@@ -45,6 +47,4 @@ fn main() {
             }
         }
     }
-    
-    println!("{:#?}", dom_builder.captured_elements());
 }

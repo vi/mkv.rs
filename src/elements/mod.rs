@@ -6,6 +6,7 @@ pub mod parser;  // bytes -> events
 pub mod builder; // events -> DOM
 pub mod generator; // DOM -> bytes
 pub mod templates;
+pub mod midlevel; // events -> events+DOM
 
 #[derive(Debug,Eq,PartialEq,Clone,Copy)]
 pub enum Type {
