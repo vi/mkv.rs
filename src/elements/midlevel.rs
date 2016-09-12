@@ -1,6 +1,7 @@
 use std::io::Write;
 
 use super::parser::Event;
+use super::parser::SimpleContent;
 use super::database::Class;
 use super::database::id_to_class;
 use super::database::class_to_id;
@@ -13,21 +14,24 @@ use super::builder::Builder;
 use super::generator::generate;
 use super::el_bin;
 
-pub enum MidlevelEvent {
+pub enum MidlevelEvent<'a> {
     EnterElement(Class),
     LeaveElement(Class),
-    Element(Rc<Element>),
+    
+    Element(Rc<Element>), // After "Build" reply
+    Content(SimpleContent<'a>),
+    
     Resync,
 }
 
-#[derive(PartialEq)]
 pub enum WhatToDo {
     Build, // build DOM for this element
-    GoOn, // go to next element
+    GoOn, // continue delibering events without starting builder
 }
 
 pub trait MidlevelEventHandler {
-    fn handle(&mut self, e: MidlevelEvent) -> WhatToDo;
+    fn event(&mut self, e: MidlevelEvent) -> ();
+    fn how_to_handle(&mut self, c: Class) -> WhatToDo;
 }
 
 /// Mid-evel parser allows using Builder, but skipping headers of Segments or Clusters
@@ -51,15 +55,16 @@ impl<H:MidlevelEventHandler> EventsHandler for MidlevelParser<H> {
     fn event(&mut self, e : super::parser::Event) {
         use super::parser::Event::*;
 
-        let mut choice = WhatToDo::GoOn;
         match e {
             Begin(x)    => {
                 if let Some(ref mut b) = self.b {
                     b.event(e);
                 } else {
-                    let choice2 = self.h.handle(MidlevelEvent::EnterElement(id_to_class(x.id)));
-                    match choice2 {
-                        WhatToDo::GoOn => (),
+                    let klass = id_to_class(x.id);
+                    match self.h.how_to_handle(klass) {
+                        WhatToDo::GoOn => {
+                            self.h.event(MidlevelEvent::EnterElement(klass));
+                        }
                         WhatToDo::Build => {
                             let mut b = Builder::new();
                             b.event(e);
@@ -67,37 +72,34 @@ impl<H:MidlevelEventHandler> EventsHandler for MidlevelParser<H> {
                         }
                     }
                 }
-                ;
             }
-            Data(_) => {
+            Data(_) if self.b.is_some() => {
                 if let Some(ref mut b) = self.b {
                     b.event(e);
-                } else {
-                    // ignore it
                 }
+            }
+            Data(x) => {
+                self.h.event(MidlevelEvent::Content(x));
             }
             End(x)      => {
                 if let Some(mut b) = self.b.take() {
                     b.event(e);
                     if ! b.captured_elements().is_empty() {
                         let element = b.into_captured_elements().into_iter().next().unwrap();
-                        choice = self.h.handle(MidlevelEvent::Element(element));
+                        self.h.event(MidlevelEvent::Element(element));
                     } else {
                         self.b = Some(b);
                     }
                 } else {
-                    choice = self.h.handle(MidlevelEvent::LeaveElement(id_to_class(x.id)));
+                    self.h.event(MidlevelEvent::LeaveElement(id_to_class(x.id)));
                 }
                 
             }
             Resync      => {
                 self.b = None;
-                choice = self.h.handle(MidlevelEvent::Resync);
+                self.h.event(MidlevelEvent::Resync);
             },
         };
-        if choice == WhatToDo::Build {
-            self.b = Some(Builder::new());
-        }
     }
 }
 
@@ -120,28 +122,33 @@ impl<W:Write> MidlevelEventsToFile<W> {
 }
 
 impl<W:Write> MidlevelEventHandler for MidlevelEventsToFile<W> {
-    fn handle(&mut self, e: MidlevelEvent) -> WhatToDo {
+    fn how_to_handle(&mut self, klass: Class) -> WhatToDo {
+        if klass == Class::Segment {
+            WhatToDo::GoOn
+        } else {
+            WhatToDo::Build
+        }
+    }
+    fn event(&mut self, e: MidlevelEvent) -> () {
         match e {
             MidlevelEvent::EnterElement(klass) => {
                 if (klass == Class::Segment) {
                     self.w.write(&generate_ebml_number(class_to_id(klass), EbmlNumberMode::Identifier)).unwrap();
                     self.w.write(b"\xFF").unwrap(); // unknown length
                     self.w.write(&generate(&el_bin(Class::Void, vec![0;32]))).unwrap();
-                    WhatToDo::GoOn
                 } else {
-                    WhatToDo::Build
+                    panic!("Should not happen")
                 }
             }
             MidlevelEvent::Element(x) => {
                 self.w.write(&generate(&x)).unwrap();
-                WhatToDo::GoOn
             }
             MidlevelEvent::LeaveElement(_) => { 
-                WhatToDo::GoOn
+            }
+            MidlevelEvent::Content(_) => {
             }
             MidlevelEvent::Resync => {
                 self.w.write(&generate(&el_bin(Class::Void, b"\nHere was resync\n".to_vec()))).unwrap();
-                WhatToDo::GoOn
             }
         }
     }

@@ -36,7 +36,14 @@ use mkv::elements::typical_matroska_header;
 
 impl MidlevelEventHandler for MyHandler {
 
-    fn handle(&mut self, e: MidlevelEvent) -> WhatToDo {
+    fn how_to_handle(&mut self, klass: Class) -> WhatToDo {
+        if klass == Class::Segment {
+            WhatToDo::GoOn
+        } else {
+            WhatToDo::Build
+        }
+    }
+    fn event(&mut self, e: MidlevelEvent) -> () {
         match e {
             MidlevelEvent::EnterElement(klass) => {
                 if klass == Class::Segment {
@@ -53,31 +60,28 @@ impl MidlevelEventHandler for MyHandler {
                     
                     self.w = Some(Box::new(w));
                     self.counter += 1;
-                    WhatToDo::GoOn
                 } else {
-                    WhatToDo::Build
                 }
             }
             MidlevelEvent::Element(x) => {
                 if let Some(ref mut w) = self.w {
                     w.write(&generate(&x)).unwrap();
                 }
-                WhatToDo::GoOn
             }
             MidlevelEvent::LeaveElement(_) => { 
-                WhatToDo::GoOn
+            }
+            MidlevelEvent::Content(_) => {
             }
             MidlevelEvent::Resync => {
                 if let Some(ref mut w) = self.w {
                     w.write(&generate(&el_bin(Class::Void, b"\nHere was resync\n".to_vec()))).unwrap();
                 }
-                WhatToDo::GoOn
             }
         }
     }
 }
 
-const BSIZE : usize = 4096;
+const BSIZE : usize = 65536;
 fn main() {
     env_logger::init().unwrap();
 
