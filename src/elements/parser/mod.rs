@@ -45,14 +45,14 @@ pub trait EventsHandler {
     fn event(&mut self, e : Event);
 }
 
-pub trait Parser<'q, E : EventsHandler + ?Sized + 'q> {
-    fn new(cb : &'q mut E) -> Self;
-    fn feed_bytes(&mut self, bytes : &[u8]);
+pub trait Parser {
+    fn new() -> Self;
+    fn feed_bytes<E : EventsHandler + ?Sized>(&mut self, bytes : &[u8], cb: &mut E);
     fn force_resync(&mut self);
 }
 
-pub fn new<E : EventsHandler + ?Sized> (cb: &mut E) -> ParserState<E> {
-    self::Parser::new(cb)
+pub fn new () -> ParserState {
+    self::Parser::new()
 }
 
 //////////////////////////////
@@ -85,8 +85,7 @@ enum ParserMode {
 }
 
 
-pub struct ParserState<'q, E : EventsHandler + ?Sized + 'q> {
-    cb : &'q mut E,
+pub struct ParserState {
     accumulator : Vec<u8>,
     opened_elements_stack : Vec<Info>,
     mode : ParserMode,
@@ -100,7 +99,7 @@ enum ResultOfTryParseSomething<'a> {
     Error,
 }
 
-impl<'q, E:EventsHandler+?Sized+'q> ParserState<'q, E> {
+impl ParserState {
 
     fn try_resync<'a>(&mut self, buf:&'a [u8]) -> ResultOfTryParseSomething<'a> {
         use self::ResultOfTryParseSomething::*;
@@ -122,7 +121,7 @@ impl<'q, E:EventsHandler+?Sized+'q> ParserState<'q, E> {
         }
     }
     
-    fn try_parse_element_data<'a>(&mut self, buf:&'a [u8], len:usize, typ : super::Type) -> ResultOfTryParseSomething<'a> {
+    fn try_parse_element_data<'a, E : EventsHandler+?Sized>(&mut self, buf:&'a [u8], len:usize, typ : super::Type, cb: &mut E) -> ResultOfTryParseSomething<'a> {
         use self::ResultOfTryParseSomething::{NoMoreData,KeepGoing,Error};
         use self::Event::{Data};
         use self::SimpleContent::
@@ -196,14 +195,14 @@ impl<'q, E:EventsHandler+?Sized+'q> ParserState<'q, E> {
                     }
                 }
             };
-            self.cb.event( Data(da) );
+            cb.event( Data(da) );
             KeepGoing(r)
         } else {
             return NoMoreData;
         }
     }
     
-    fn try_parse_element_header<'a>(&mut self, buf:&'a [u8]) -> ResultOfTryParseSomething<'a> {
+    fn try_parse_element_header<'a, E:EventsHandler+?Sized>(&mut self, buf:&'a [u8], cb: &mut E) -> ResultOfTryParseSomething<'a> {
         use self::ResultOfTryParseSomething::{NoMoreData,KeepGoing};
         use self::ResultOfTryParseSomething::Error as MyError;
         use self::parse_ebml_number::Result::*;
@@ -249,15 +248,15 @@ impl<'q, E:EventsHandler+?Sized+'q> ParserState<'q, E> {
         };
         
         let el = Info{id: element_id, length_including_header: full_element_size, offset: self.current_offset}; 
-        self.cb.event( Begin( &el ));
+        cb.event( Begin( &el ));
         self.opened_elements_stack.push(el);
-        //self.cb.auxilary_event( Debug (format!("element class={:?} type={:?} off={} clid={}  len={:?}",
+        //cb.auxilary_event( Debug (format!("element class={:?} type={:?} off={} clid={}  len={:?}",
         //                                                cl, typ, self.current_offset, element_id, element_size )));
                                                         
         KeepGoing(restbuf3)
     }
     
-    fn close_expired_elements<'a>(&mut self) {
+    fn close_expired_elements<'a, E:EventsHandler+?Sized>(&mut self, cb: &mut E) {
         use self::Event::{End};
         let mut number_of_elements_to_remove = 0;
         
@@ -281,7 +280,7 @@ impl<'q, E:EventsHandler+?Sized+'q> ParserState<'q, E> {
                 j += 1;
                 if j > number_of_elements_to_remove { break; }
                 // println!("sending end {:?}", i);
-                self.cb.event (End(i));
+                cb.event (End(i));
             }
         }
         
@@ -291,57 +290,56 @@ impl<'q, E:EventsHandler+?Sized+'q> ParserState<'q, E> {
 }
 
 
-impl<'q, E : EventsHandler + ?Sized + 'q> Parser<'q, E> for ParserState<'q, E> {
-    fn new(cb : &'q mut E) -> ParserState<'q, E> {
+impl Parser for ParserState {
+    fn new() -> ParserState {
         ParserState {
             accumulator: vec![],
-            cb : cb,
             mode : ParserMode::Header,
             opened_elements_stack : vec![],
             current_offset : 0,
         }
     }
     
-    fn feed_bytes(&mut self, bytes : &[u8])
+    fn feed_bytes<E : EventsHandler + ?Sized>(&mut self, bytes : &[u8], cb: &mut E)
     {
         use self::ResultOfTryParseSomething::*;
         use self::ParserMode::*;
         
-        //self.cb.log(format!("feed_bytes {} len={}", bytes[0], self.accumulator.len()).as_str() );
+        //cb.log(format!("feed_bytes {} len={}", bytes[0], self.accumulator.len()).as_str() );
         self.accumulator.extend_from_slice(bytes);
         
         let tmpvector = self.accumulator.to_vec();
         {
             let mut buf = tmpvector.as_slice();
-            //self.cb.log( format!("feed_bytes2 len={} buflen={}", self.accumulator.len(), buf.len()) );
+            //cb.log( format!("feed_bytes2 len={} buflen={}", self.accumulator.len(), buf.len()) );
             loop {
                 let r = match self.mode {
                     Resync => self.try_resync(buf),
-                    Header => self.try_parse_element_header(buf),
-                    Data(x, t) => self.try_parse_element_data(buf, x, t),
+                    Header => self.try_parse_element_header(buf, cb),
+                    Data(x, t) => self.try_parse_element_data(buf, x, t, cb),
                 };
-                //self.cb.log( format!("try_parse_something={:?}", r));
+                //cb.log( format!("try_parse_something={:?}", r));
                 let newbuf = match r {
                     NoMoreData => break,
-                    Error => {self.mode = ParserMode::Resync; self.cb.event(self::Event::Resync); buf},
+                    Error => {self.mode = ParserMode::Resync; cb.event(self::Event::Resync); buf},
                     KeepGoing(rest) => rest
                 };
                 self.current_offset += (buf.len() - newbuf.len()) as u64;
-                //self.cb.log(format!("current offset: {}", self.current_offset).as_str());
+                //cb.log(format!("current offset: {}", self.current_offset).as_str());
                 
                 if let KeepGoing(_) = r {
                     if let Data(0, t) = self.mode {
-                        self.try_parse_element_data(newbuf, 0, t);
+                        self.try_parse_element_data(newbuf, 0, t, cb);
                     };
                 };
                 
-                self.close_expired_elements();
+                self.close_expired_elements(cb);
                 buf = newbuf;
-                //self.cb.log(format!("more to parse: {}", newbuf.len()).as_str());
+                //cb.log(format!("more to parse: {}", newbuf.len()).as_str());
             }
             self.accumulator = buf.to_vec();
         }
-        //self.cb.log( format!("feed_bytes3 len={}" , self.accumulator.len()).as_str());
+        //cb.log( format!("feed_bytes3 len={}" , self.accumulator.len()).as_str());
     }
     
     fn force_resync(&mut self)

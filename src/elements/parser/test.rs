@@ -29,17 +29,17 @@ macro_rules! t {
         let mut s : String = Default::default();
         {
             let mut strdumper = SerializeToStr { s:  &mut s };
-            let mut p = super::new( &mut strdumper );
-            p.feed_bytes(&$input);
+            let mut p = super::new();
+            p.feed_bytes(&$input, &mut strdumper);
         }
         assert_eq!(s, $output);
     }{
         let mut s : String = Default::default();
         {
             let mut strdumper = SerializeToStr { s: &mut s };
-            let mut p = super::new( &mut strdumper );
+            let mut p = super::new();
             for i in $input.iter() {
-                p.feed_bytes(&[*i]);
+                p.feed_bytes(&[*i], &mut strdumper);
             }
         }
         assert_eq!(s, $output);

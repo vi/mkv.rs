@@ -31,14 +31,14 @@ fn main() {
     let mut midlevel = mkv::elements::midlevel::MidlevelParser::new(events_to_file);
     
     {
-        let mut m = mkv::elements::parser::new(&mut midlevel);
+        let mut m = mkv::elements::parser::new();
         
         loop {
             let mut b = [0; BSIZE];
             match f.read(&mut b) {
                 Ok(x) => match x {
                         0 => break,
-                        x => m.feed_bytes(b.split_at(x).0),
+                        x => m.feed_bytes(b.split_at(x).0, &mut midlevel),
                     },
                 Err(e) => { println!("error reading: {}", e); break; },
             }

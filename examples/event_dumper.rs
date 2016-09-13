@@ -36,14 +36,14 @@ fn main() {
     
     //let mut stdout = std::io::stdout();
     let mut element_logger = mkv::elements::parser::debug::DebugPrint::new(log::LogLevel::Info);
-    let mut m = mkv::elements::parser::new(&mut element_logger);
+    let mut m = mkv::elements::parser::new();
     
     loop {
         let mut b = [0; BSIZE];
         match f.read(&mut b) {
             Ok(x) => match x {
                     0 => break,
-                    x => m.feed_bytes(b.split_at(x).0),
+                    x => m.feed_bytes(b.split_at(x).0, &mut element_logger),
                 },
             Err(e) => { println!("error reading: {}", e); break; },
         }

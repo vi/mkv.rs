@@ -36,14 +36,14 @@ fn main() {
     //let mut stdout = std::io::stdout();
     let mut dom_builder : mkv::elements::builder::Builder = Default::default();
     {
-        let mut m = mkv::elements::parser::new(&mut dom_builder);
+        let mut m = mkv::elements::parser::new();
         
         loop {
             let mut b = [0; BSIZE];
             match f.read(&mut b) {
                 Ok(x) => match x {
                         0 => break,
-                        x => m.feed_bytes(b.split_at(x).0),
+                        x => m.feed_bytes(b.split_at(x).0, &mut dom_builder),
                     },
                 Err(e) => { println!("error reading: {}", e); break; },
             }
