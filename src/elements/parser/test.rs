@@ -48,7 +48,7 @@ macro_rules! t {
 
 
 #[test] fn t1() {
-t!( [0xA3, 0x82, 33, 44] , "b SimpleBlock(offset:0, rawlen:4),d Binary([33, 44]),e SimpleBlock(offset:0, rawlen:4),");}
+t!( [0xA3, 0x82, 33, 44] , "b SimpleBlock(offset:0, rawlen:4),d Binary([33, 44], Full),e SimpleBlock(offset:0, rawlen:4),");}
 
 
 #[test] fn t2() {
@@ -103,7 +103,7 @@ t!( [ 0x86, 0x85, 0x41, 0x42, 0x43, 0x44, 0x45 ],
         "b CodecID(offset:0, rawlen:7),d Text(\"ABCDE\"),e CodecID(offset:0, rawlen:7),");}
         
 #[test] fn t7() {
-t!( [0xA3, 0x80] , "b SimpleBlock(offset:0, rawlen:2),d Binary([]),e SimpleBlock(offset:0, rawlen:2),");}
+t!( [0xA3, 0x80] , "b SimpleBlock(offset:0, rawlen:2),d Binary([], Full),e SimpleBlock(offset:0, rawlen:2),");}
 
 #[test] fn t8() {
 t!( [0x1a, 0x45, 0xdf, 0xa3, 0x80] , "b EBML(offset:0, rawlen:5),e EBML(offset:0, rawlen:5),");}

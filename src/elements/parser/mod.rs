@@ -23,12 +23,21 @@ pub struct Info {
     pub length_including_header : Option<u64>,
 }
 
+/// Note: binary chunks are not related to lacing
+#[derive(Debug,PartialEq,Clone)]
+pub enum BinaryChunkStatus {
+    Full, // this chunk is the full data of Binary element
+    First,
+    Middle,
+    Last,
+}
+
 #[derive(Debug,PartialEq,Clone)]
 pub enum SimpleContent<'a> {
     Unsigned(u64),
     Signed(i64),
     Text(&'a str),
-    Binary(&'a [u8]),
+    Binary(&'a [u8], BinaryChunkStatus),
     Float(f64),
     MatroskaDate(i64), // Nanoseconds since 20010101_000000_UTC
 
@@ -133,7 +142,7 @@ impl ParserState {
             let (l,r) = buf.split_at(len);
             let da = match typ {
                 super::Type::Master => panic!("Wrong way"),
-                super::Type::Binary => Binary(l),
+                super::Type::Binary => Binary(l, BinaryChunkStatus::Full),
                 super::Type::Unsigned => {
                     let mut q : u64 = 0;
                     let mut it = l.iter();
@@ -190,7 +199,7 @@ impl ParserState {
                                 Err(_) => return Error,
                             },
                         0 => Float(0.0),
-                        10 => { error!("Error: 10-byte floats are not supported"); Binary(l) }
+                        10 => { error!("Error: 10-byte floats are not supported in mkv"); Binary(l, BinaryChunkStatus::Full) }
                         _ => return Error,
                     }
                 }

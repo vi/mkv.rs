@@ -3,6 +3,7 @@ use super::super::parser::Info;
 use super::super::parser::Event;
 use super::super::parser::SimpleContent;
 use super::super::parser::EventsHandler;
+use super::super::parser::BinaryChunkStatus::Full;
 use super::super::database::Class;
 use super::super::database::class_to_id;
 use super::super::*;
@@ -17,7 +18,7 @@ use std::rc::Rc;
 #[test] fn t2() {
     let mut b : Builder = Default::default();
     b.event(Event::Begin(&Info { id : 0xA3, offset: 0, length_including_header: Some(4) }));
-    b.event(Event::Data(SimpleContent::Binary(&vec![0x44, 0x55])));
+    b.event(Event::Data(SimpleContent::Binary(&vec![0x44, 0x55], Full)));
     b.event(Event::End(&Info { id : 0xA3, offset: 0, length_including_header: Some(4) }));
     assert_eq!(*b.captured_elements(), vec![
         Rc::new(el_bin(Class::SimpleBlock, vec![0x44, 0x55])),

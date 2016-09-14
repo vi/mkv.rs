@@ -32,6 +32,7 @@ impl Builder {
 impl EventsHandler for Builder {
     fn event(&mut self, e : Event) {
         use super::parser::Event::*;
+        use super::parser::BinaryChunkStatus::Full;
 
         if let Some(nb) = self.nb.take() {
             let terminated = match &e {
@@ -64,7 +65,8 @@ impl EventsHandler for Builder {
                     SimpleContent::Unsigned(x) => ElementContent::Unsigned(x),
                     SimpleContent::Signed(x) => ElementContent::Signed(x),
                     SimpleContent::Text(x) => ElementContent::Text(Rc::new(x.to_string())),
-                    SimpleContent::Binary(x) => ElementContent::Binary(Rc::new(x.to_vec())),
+                    SimpleContent::Binary(x,Full) => ElementContent::Binary(Rc::new(x.to_vec())),
+                    SimpleContent::Binary(x,_) => unimplemented!(),
                     SimpleContent::Float(x) => ElementContent::Float(x),
                     SimpleContent::MatroskaDate(x) => ElementContent::MatroskaDate(x),
                 });
