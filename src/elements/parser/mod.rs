@@ -54,6 +54,13 @@ pub trait EventsHandler {
     fn event(&mut self, e : Event);
 }
 
+#[cfg(feature="nightly")]
+impl<F:FnMut(Event)->()> EventsHandler for F {
+    fn event(&mut self, e : Event) { 
+        self.call_mut((e,))
+    }
+}
+
 pub trait Parser {
     fn new() -> Self;
     fn feed_bytes<E : EventsHandler + ?Sized>(&mut self, bytes : &[u8], cb: &mut E);

@@ -5,6 +5,7 @@
 #![allow(unused_variables)]
 
 #![cfg_attr(feature = "rustc-serialize", feature(custom_derive))]
+#![cfg_attr(feature = "nightly", feature(fn_traits))]
 
 #[macro_use]
 extern crate log;
