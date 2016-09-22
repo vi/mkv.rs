@@ -303,6 +303,35 @@ impl ParserState {
         let newlen = self.opened_elements_stack.len() - number_of_elements_to_remove;
         self.opened_elements_stack.truncate(newlen);
     }
+    
+    fn feed_bytes_1<'a, 'b, E : EventsHandler + ?Sized>(&mut self, buf : &'a [u8], cb: &'b mut E) -> Option<&'a [u8]>
+    {
+        use self::ResultOfTryParseSomething::*;
+        use self::ParserMode::*;
+        
+        let r = match self.mode {
+            Resync => self.try_resync(buf),
+            Header => self.try_parse_element_header(buf, cb),
+            Data(x, t) => self.try_parse_element_data(buf, x, t, cb),
+        };
+        //cb.log( format!("try_parse_something={:?}", r));
+        let newbuf = match r {
+            NoMoreData => return None,
+            Error => {self.mode = ParserMode::Resync; cb.event(self::Event::Resync); buf},
+            KeepGoing(rest) => rest
+        };
+        self.current_offset += (buf.len() - newbuf.len()) as u64;
+        //cb.log(format!("current offset: {}", self.current_offset).as_str());
+        
+        if let KeepGoing(_) = r {
+            if let Data(0, t) = self.mode {
+                self.try_parse_element_data(newbuf, 0, t, cb);
+            };
+        };
+        
+        self.close_expired_elements(cb);
+        Some(newbuf)
+    }
 }
 
 
@@ -329,29 +358,11 @@ impl Parser for ParserState {
             let mut buf = tmpvector.as_slice();
             //cb.log( format!("feed_bytes2 len={} buflen={}", self.accumulator.len(), buf.len()) );
             loop {
-                let r = match self.mode {
-                    Resync => self.try_resync(buf),
-                    Header => self.try_parse_element_header(buf, cb),
-                    Data(x, t) => self.try_parse_element_data(buf, x, t, cb),
-                };
-                //cb.log( format!("try_parse_something={:?}", r));
-                let newbuf = match r {
-                    NoMoreData => break,
-                    Error => {self.mode = ParserMode::Resync; cb.event(self::Event::Resync); buf},
-                    KeepGoing(rest) => rest
-                };
-                self.current_offset += (buf.len() - newbuf.len()) as u64;
-                //cb.log(format!("current offset: {}", self.current_offset).as_str());
-                
-                if let KeepGoing(_) = r {
-                    if let Data(0, t) = self.mode {
-                        self.try_parse_element_data(newbuf, 0, t, cb);
-                    };
-                };
-                
-                self.close_expired_elements(cb);
-                buf = newbuf;
-                //cb.log(format!("more to parse: {}", newbuf.len()).as_str());
+                if let Some(x) = self.feed_bytes_1(buf, cb) {
+                    buf = x
+                } else {
+                    break;
+                }
             }
             self.accumulator = buf.to_vec();
         }
