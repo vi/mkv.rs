@@ -69,6 +69,12 @@ named!(pub ebml_number <EbmlNumber>,
     )
 );
 
+impl EbmlNumber {
+    fn is_nan(&self) -> bool {
+        self.raw_value == (0b1 << (self.length*7)) - 1
+    }
+}
+
 #[test]
 fn eun() {
     assert_eq!(ebml_number(b"\x8A\x45\xDF\xA3"),
@@ -119,4 +125,26 @@ fn eun() {
                                  raw_value: 0x45DFA301020304,
                                  length: 8,
                              }));
+}
+
+#[test]
+fn t_isnan() {
+    assert_eq!(EbmlNumber{raw_value: 0x7F, length: 1}.is_nan(), true);
+    assert_eq!(EbmlNumber{raw_value: 0x7F, length: 2}.is_nan(), false);
+    assert_eq!(EbmlNumber{raw_value: 0x00, length: 1}.is_nan(), false);
+    assert_eq!(EbmlNumber{raw_value: 0x01, length: 1}.is_nan(), false);
+    assert_eq!(EbmlNumber{raw_value: 0x7E, length: 1}.is_nan(), false);
+    assert_eq!(EbmlNumber{raw_value: 0x3FFF, length: 2}.is_nan(), true);
+    assert_eq!(EbmlNumber{raw_value: 0x3FFF, length: 3}.is_nan(), false);
+    assert_eq!(EbmlNumber{raw_value: 0x3FFF, length: 4}.is_nan(), false);
+    assert_eq!(EbmlNumber{raw_value: 0x3FFE, length: 2}.is_nan(), false);
+    assert_eq!(EbmlNumber{raw_value: 0x0000, length: 2}.is_nan(), false);
+    assert_eq!(EbmlNumber{raw_value: 0x1FFFFF, length: 3}.is_nan(), true);
+    assert_eq!(EbmlNumber{raw_value: 0x1FFFFF, length: 4}.is_nan(), false);
+    assert_eq!(EbmlNumber{raw_value: 0x0FFFFFFF, length: 4}.is_nan(), true);
+    assert_eq!(EbmlNumber{raw_value: 0x07FFFFFFFF, length: 5}.is_nan(), true);
+    assert_eq!(EbmlNumber{raw_value: 0x03FFFFFFFFFF, length: 6}.is_nan(), true);
+    assert_eq!(EbmlNumber{raw_value: 0x01FFFFFFFFFFFF, length: 7}.is_nan(), true);
+    assert_eq!(EbmlNumber{raw_value: 0x00FFFFFFFFFFFFFF, length: 8}.is_nan(), true);
+    assert_eq!(EbmlNumber{raw_value: 0x00FFFFFFFFFFFFFE, length: 8}.is_nan(), false);
 }
