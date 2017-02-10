@@ -186,3 +186,19 @@ fn t_asid2() {
     assert_eq!(ebml_number(b"\x1A\x45\xDF\xA3").unwrap().1.as_id(),
                0x1A45DFA3);
 }
+
+#[test]
+fn t_head1() {
+    assert_eq!(ebml_header(b"\x84\x83\x01\x02\x03"),
+               IResult::Done(&b"\x01\x02\x03"[..],
+                             EbmlElementHeader {
+                                 id: 0x84,
+                                 len: Some(3),
+                             }));
+    assert_eq!(ebml_header(b"\x84\xFF\x01\x02\x03"),
+               IResult::Done(&b"\x01\x02\x03"[..],
+                             EbmlElementHeader {
+                                 id: 0x84,
+                                 len: None,
+                             }));
+}
