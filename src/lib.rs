@@ -18,6 +18,17 @@ pub struct EbmlElementHeader {
     pub len: Option<u64>,
 }
 
+#[derive(Debug,Eq,PartialEq,Clone,Copy)]
+pub enum Type {
+    Master,
+    Unsigned,
+    Signed,
+    TextAscii,
+    TextUtf8,
+    Binary,
+    Float,
+    Date,
+}
 
 impl EbmlNumber {
     fn is_nan(&self) -> bool {
@@ -32,5 +43,5 @@ impl EbmlNumber {
 }
 
 
-
+pub mod database;
 pub mod parse;
