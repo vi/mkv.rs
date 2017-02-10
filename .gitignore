@@ -1,0 +1,7 @@
+build
+Cargo.lock
+target
+*.mkv
+*.webm
+*.xml
+*.bk
