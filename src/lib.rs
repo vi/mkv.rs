@@ -65,5 +65,12 @@ impl EbmlNumber {
     fn as_unsigned(&self) -> u64 {
         self.raw_value
     }
+    fn as_signed(&self) -> i64 {
+        if 0 == self.raw_value & (0b1 << (self.length * 7 - 1)) {
+            self.raw_value as i64
+        } else {
+            (self.raw_value as i64) - (0b1 << (self.length * 7))
+        }
+    }
 }
 

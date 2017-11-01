@@ -185,6 +185,38 @@ fn t_asid() {
 fn t_asid2() {
     assert_eq!(ebml_number(b"\x1A\x45\xDF\xA3").unwrap().1.as_id(),
                0x1A45DFA3);
+    assert_eq!(ebml_number(b"\x54\xBB").unwrap().1.as_id(),
+               0x54BB);
+}
+
+#[test]
+fn t_signed() {
+    assert_eq!(ebml_number(b"\x82")
+                .unwrap().1.as_signed(), 2);
+    assert_eq!(ebml_number(b"\xFF")
+                .unwrap().1.as_signed(), -1);
+    assert_eq!(ebml_number(b"\xBF")
+                .unwrap().1.as_signed(), 63);
+    assert_eq!(ebml_number(b"\xC0")
+                .unwrap().1.as_signed(), -64);
+    assert_eq!(ebml_number(b"\x7F\xFF")
+                .unwrap().1.as_signed(), -1);
+    assert_eq!(ebml_number(b"\x5F\xFF")
+                .unwrap().1.as_signed(), 8191);
+    assert_eq!(ebml_number(b"\x60\x00")
+                .unwrap().1.as_signed(), -8192);
+    assert_eq!(ebml_number(b"\x3F\xFF\xFF")
+                .unwrap().1.as_signed(), -1);
+    assert_eq!(ebml_number(b"\x1F\xFF\xFF\xFF")
+                .unwrap().1.as_signed(), -1);
+    assert_eq!(ebml_number(b"\x0F\xFF\xFF\xFF\xFF")
+                .unwrap().1.as_signed(), -1);
+    assert_eq!(ebml_number(b"\x07\xFF\xFF\xFF\xFF\xFF")
+                .unwrap().1.as_signed(), -1);
+    assert_eq!(ebml_number(b"\x03\xFF\xFF\xFF\xFF\xFF\xFF")
+                .unwrap().1.as_signed(), -1);
+    assert_eq!(ebml_number(b"\x01\xFF\xFF\xFF\xFF\xFF\xFF\xFF")
+                .unwrap().1.as_signed(), -1);
 }
 
 #[test]
