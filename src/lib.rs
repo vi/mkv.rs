@@ -4,6 +4,12 @@
 #[macro_use]
 extern crate nom;
 
+
+pub mod database;
+pub mod parse;
+
+pub use database::ClassName;
+
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct EbmlNumber {
     pub raw_value: u64,
@@ -17,6 +23,25 @@ pub struct EbmlElementHeader {
     pub id: EbmlElementRawId,
     pub len: Option<u64>,
 }
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum MatroskaParserEvent<'a> {
+    HeaderOfALargeElementEncountered(ClassName),
+    SmallElement(ClassName, ElementContent<'a>),
+}
+
+#[derive(PartialEq,Debug,PartialOrd,Clone)]
+pub enum ElementContent<'a> {
+    Master(Vec<(ClassName, ElementContent<'a>)>),
+    Unsigned(u64),
+    Signed(i64),
+    Binary(&'a [u8]),
+    Text(&'a str),
+    Float(f64),
+    MatroskaDate(i64), // Nanoseconds since 20010101_000000_UTC
+    Unknown(u64, &'a [u8]),
+}
+
 
 #[derive(Debug,Eq,PartialEq,Clone,Copy)]
 pub enum Type {
@@ -42,6 +67,3 @@ impl EbmlNumber {
     }
 }
 
-
-pub mod database;
-pub mod parse;

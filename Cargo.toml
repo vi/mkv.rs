@@ -4,4 +4,4 @@ version = "0.1.0"
 authors = ["Vitaly _Vi Shukela <vi0oss@gmail.com>"]
 
 [dependencies]
-nom = "^2.1.0"
+nom = { version = "^3.0.0", features = ["nightly"]}
