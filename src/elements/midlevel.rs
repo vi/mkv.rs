@@ -14,6 +14,7 @@ use super::builder::Builder;
 use super::generator::generate;
 use super::el_bin;
 
+#[derive(Debug)]
 pub enum MidlevelEvent<'a> {
     EnterElement(Class),
     LeaveElement(Class),
@@ -26,7 +27,7 @@ pub enum MidlevelEvent<'a> {
 
 pub enum WhatToDo {
     Build, // build DOM for this element
-    GoOn, // continue delibering events without starting builder
+    GoOn, // continue delivering events without starting builder
 }
 
 pub trait MidlevelEventHandler {
