@@ -1,7 +1,7 @@
 [package]
 
 name = "mkv"
-version = "0.0.5"
+version = "0.0.6"
 authors = ["Vitaly '_Vi' Shukela"]
 license-file = "LICENSE"
 homepage = "https://github.com/vi/mkv.rs"
@@ -10,10 +10,16 @@ description = "[incomplete yet] Matroska (mkv,webm) files parser and generator i
 keywords = ["matroska", "mkv", "webm", "demuxer", "muxer"]
 
 [dependencies]
-byteorder = "0.3.5"
+byteorder = "0.3"
 log = "0.3"
 rustc-serialize = { version = "0.3", optional = true }
 
 [dev-dependencies.env_logger]
 version="0.3"
 default-features=false
+
+[dev-dependencies.random]
+version="0.12"
+
+[features]
+nightly=[]
