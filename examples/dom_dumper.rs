@@ -19,7 +19,7 @@ const BSIZE : usize = 4096;
 fn main() {
     env_logger::init().unwrap();
 
-    let mut reader : Box<Read> = match args().len() {
+    let reader : Box<Read> = match args().len() {
         1 => Box::new(std::io::stdin()),
         2 => Box::new(File::open(Path::new(args().nth(1).unwrap().as_str())).expect("Failed to open the file")),
         _ => panic!("Usage: dom_dumper [filename.mkv]")
@@ -28,7 +28,7 @@ fn main() {
    
     
     //let mut stdout = std::io::stdout();
-    let element_logger = mkv::elements::parser::debug::DebugPrint::new(log::LogLevel::Info);
+    let _element_logger = mkv::elements::parser::debug::DebugPrint::new(log::LogLevel::Info);
     let mut dom_builder : mkv::elements::builder::Builder = Default::default();
     {
         let mut m = mkv::elements::parser::new();

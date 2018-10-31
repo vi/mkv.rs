@@ -26,7 +26,7 @@ const BSIZE : usize = 4096;
 fn main() {
     let _ = log::set_logger(|ll| { ll.set(log::LogLevelFilter::Debug); Box::new(simplelogger::SimpleLogger) });
 
-    let mut reader : Box<Read> = match args().len() {
+    let reader : Box<Read> = match args().len() {
         1 => Box::new(std::io::stdin()),
         2 => Box::new(File::open(Path::new(args().nth(1).unwrap().as_str())).expect("Failed to open the file")),
         _ => panic!("Usage: event_dumper [filename.mkv]")
