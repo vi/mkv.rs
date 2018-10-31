@@ -95,7 +95,7 @@ t!( [ 0xff, 0xff, 0x1a, 0x45, 0xdf, 0xa3, 0xa3], "r,b EBML(offset:2, rawlen:40),
 
 #[test] fn t5() {
 t!( [ 0x44, 0x89, 0x84, 0x42, 0xe8, 0x00, 0x00 ], 
-        "b Duration(offset:0, rawlen:7),d Float(116),e Duration(offset:0, rawlen:7),");}
+        "b Duration(offset:0, rawlen:7),d Float(116.0),e Duration(offset:0, rawlen:7),");}
 
 
 #[test] fn t6() {
