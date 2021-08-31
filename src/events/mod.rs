@@ -134,7 +134,7 @@ impl<H: MatroskaEventHandler> MatroskaDemuxer<H> {
         }
         let tn = tn_ & 0x7F;
         
-        let ts = b.get_i16::<BigEndian>();
+        let ts = b.get_i16_be();
         
         let flags = b.get_u8();
         
