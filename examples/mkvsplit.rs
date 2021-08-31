@@ -25,7 +25,7 @@ const BSIZE : usize = 4096;
 fn main() {
     env_logger::init().unwrap();
 
-    let reader : Box<Read> = match args().len() {
+    let reader : Box<dyn Read> = match args().len() {
         1 => Box::new(std::io::stdin()),
         2 => Box::new(File::open(Path::new(args().nth(1).unwrap().as_str())).expect("Failed to open the file")),
         _ => panic!("Usage: mkvsplit [filename.mkv]\nExtracts segments to 1.mkv, 2.mkv and so on\n")
