@@ -43,6 +43,10 @@ impl MatroskaEventHandler for My {
         }
         println!("");
     }
+
+    fn segment_tracks(&mut self, _e: &std::rc::Rc<mkv::elements::Element>) {
+        println!("(tracks description skipped)");
+    }
 }
 
 const BSIZE : usize = 65536;

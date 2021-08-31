@@ -20,6 +20,8 @@ pub struct MatroskaFrame {
 /// TODO: more functions (or rewrite the whole thing)
 pub trait MatroskaEventHandler {
     fn frame_encountered(&mut self, f: MatroskaFrame);
+    fn segment_tracks(&mut self, e: &std::rc::Rc<super::elements::Element>);
+    fn segment_info(&mut self, e: &std::rc::Rc<super::elements::Element>) { }
 }
 
 enum WhatToAwait {
@@ -89,14 +91,25 @@ impl<H: MatroskaEventHandler> MidlevelEventHandler for MatroskaDemuxer<H> {
             }
         },
         MidlevelEvent::LeaveElement(_) => {},
-        MidlevelEvent::Element(_) => {},
+        MidlevelEvent::Element(e) => {
+            match e.class {
+                Class::Info => self.h.segment_info(&e),
+                Class::Tracks => self.h.segment_tracks(&e),
+                _ => warn!("This code line should not be reachable"),
+            }
+        },
         MidlevelEvent::Resync => {
+            warn!("Resynging matroska parser")
             // TODO: report to user
         },
     }
   }
   fn how_to_handle(&mut self, c: Class) -> WhatToDo {
-    WhatToDo::GoOn
+    match c {
+        Class::Info => WhatToDo::Build,
+        Class::Tracks => WhatToDo::Build,
+        _ => WhatToDo::GoOn,
+    }
   }
 }
 
