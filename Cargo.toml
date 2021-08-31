@@ -2,7 +2,7 @@
 edition="2018"
 
 name = "mkv"
-version = "0.0.7"
+version = "0.0.8"
 authors = ["Vitaly '_Vi' Shukela"]
 license-file = "LICENSE"
 homepage = "https://github.com/vi/mkv.rs"
